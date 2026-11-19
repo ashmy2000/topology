@@ -1,0 +1,620 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Topology Impact Investigator",
+    "version": "1.0.0",
+    "description": "Read-only dependency impact investigation for the approved synthetic topology."
+  },
+  "host": "topology-api.example.com",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "TopologyApiKey": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key"
+    }
+  },
+  "security": [
+    {
+      "TopologyApiKey": []
+    }
+  ],
+  "paths": {
+    "/api/v1/cis/search": {
+      "get": {
+        "operationId": "searchCIs",
+        "summary": "Find configuration items",
+        "description": "Return candidate CIs and canonical ServiceNow IDs. Ask for clarification before assessing an ambiguous match.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "maximum": 50,
+            "minimum": 1,
+            "default": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/SearchResult"
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "503": {
+            "description": "API authentication or graph database unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/impact": {
+      "post": {
+        "operationId": "assessImpact",
+        "summary": "Assess dependency impact",
+        "description": "Use the exact sys_id from a selected search candidate as ci_id. Returns simulated impact, evidence and ownership gaps for human review.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ImpactRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/ImpactResult"
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "503": {
+            "description": "API authentication or graph database unavailable"
+          },
+          "404": {
+            "description": "CI not found"
+          }
+        }
+      }
+    },
+    "/api/v1/cis/{ci_id}/ownership": {
+      "get": {
+        "operationId": "getCIOwnership",
+        "summary": "Retrieve CI ownership",
+        "description": "Use the exact sys_id from search. Returns recorded, inferred or missing ownership routes.",
+        "parameters": [
+          {
+            "name": "ci_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/Ownership"
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "503": {
+            "description": "API authentication or graph database unavailable"
+          },
+          "404": {
+            "description": "CI not found"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AffectedItem": {
+      "properties": {
+        "sys_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Sys Id"
+        },
+        "name": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Name"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "business application",
+            "service"
+          ],
+          "title": "Kind"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "down",
+            "at risk",
+            "at risk: DR copy lost"
+          ],
+          "title": "Status"
+        },
+        "path": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/EvidencePath"
+            }
+          ],
+          "x-nullable": true
+        },
+        "ownership": {
+          "$ref": "#/definitions/Contact"
+        },
+        "criticality": {
+          "x-nullable": true,
+          "description": "Either a string or an integer when provided.",
+          "title": "Criticality"
+        },
+        "dr_copy": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Dr Copy"
+        },
+        "dr_status": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Dr Status"
+        }
+      },
+      "type": "object",
+      "required": [
+        "sys_id",
+        "name",
+        "kind",
+        "status",
+        "path",
+        "ownership"
+      ],
+      "title": "AffectedItem"
+    },
+    "Alert": {
+      "properties": {
+        "alert": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Alert"
+        },
+        "source": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Source"
+        },
+        "severity": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Severity"
+        },
+        "ci": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Ci"
+        },
+        "on_trace": {
+          "type": "boolean",
+          "title": "On Trace"
+        },
+        "grouped_under": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Grouped Under"
+        },
+        "links": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Links"
+        }
+      },
+      "type": "object",
+      "required": [
+        "alert",
+        "source",
+        "severity",
+        "ci",
+        "on_trace",
+        "grouped_under",
+        "links"
+      ],
+      "title": "Alert"
+    },
+    "CI": {
+      "properties": {
+        "sys_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Sys Id"
+        },
+        "name": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Name"
+        },
+        "ci_type": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Ci Type"
+        },
+        "source_table": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Source Table"
+        }
+      },
+      "type": "object",
+      "required": [
+        "sys_id",
+        "name",
+        "ci_type",
+        "source_table"
+      ],
+      "title": "CI"
+    },
+    "Contact": {
+      "properties": {
+        "contact": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Contact"
+        },
+        "route": {
+          "type": "string",
+          "title": "Route"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "recorded",
+            "inferred",
+            "missing"
+          ],
+          "title": "Status"
+        },
+        "business_owner": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Business Owner"
+        },
+        "it_application_owner": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "It Application Owner"
+        }
+      },
+      "type": "object",
+      "required": [
+        "contact",
+        "route",
+        "status",
+        "business_owner",
+        "it_application_owner"
+      ],
+      "title": "Contact"
+    },
+    "DegradedCluster": {
+      "properties": {
+        "sys_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Sys Id"
+        },
+        "name": {
+          "x-nullable": true,
+          "type": "string",
+          "title": "Name"
+        },
+        "hosts_down": {
+          "type": "integer",
+          "title": "Hosts Down"
+        },
+        "hosts_total": {
+          "type": "integer",
+          "title": "Hosts Total"
+        }
+      },
+      "type": "object",
+      "required": [
+        "sys_id",
+        "name",
+        "hosts_down",
+        "hosts_total"
+      ],
+      "title": "DegradedCluster"
+    },
+    "EvidencePath": {
+      "properties": {
+        "names": {
+          "items": {
+            "x-nullable": true,
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Names"
+        },
+        "types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Types"
+        },
+        "node_records": {
+          "items": {
+            "items": {
+              "x-nullable": true,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array",
+          "title": "Node Records"
+        },
+        "link_records": {
+          "items": {
+            "items": {
+              "x-nullable": true,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array",
+          "title": "Link Records"
+        }
+      },
+      "type": "object",
+      "required": [
+        "names",
+        "types",
+        "node_records",
+        "link_records"
+      ],
+      "title": "EvidencePath"
+    },
+    "HTTPValidationError": {
+      "properties": {
+        "detail": {
+          "items": {
+            "$ref": "#/definitions/ValidationError"
+          },
+          "type": "array",
+          "title": "Detail"
+        }
+      },
+      "type": "object",
+      "title": "HTTPValidationError"
+    },
+    "ImpactRequest": {
+      "properties": {
+        "ci_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Ci Id",
+          "description": "Copy the selected candidate's exact sys_id from CI search."
+        }
+      },
+      "type": "object",
+      "required": [
+        "ci_id"
+      ],
+      "title": "ImpactRequest"
+    },
+    "ImpactResult": {
+      "properties": {
+        "failed_ci": {
+          "$ref": "#/definitions/CI"
+        },
+        "fix": {
+          "$ref": "#/definitions/Contact"
+        },
+        "affected": {
+          "items": {
+            "$ref": "#/definitions/AffectedItem"
+          },
+          "type": "array",
+          "title": "Affected"
+        },
+        "down_ci_ids": {
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "type": "array",
+          "title": "Down Ci Ids"
+        },
+        "at_risk_ci_ids": {
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "type": "array",
+          "title": "At Risk Ci Ids"
+        },
+        "additional_cis_down": {
+          "type": "integer",
+          "title": "Additional Cis Down"
+        },
+        "degraded_clusters": {
+          "items": {
+            "$ref": "#/definitions/DegradedCluster"
+          },
+          "type": "array",
+          "title": "Degraded Clusters"
+        },
+        "alerts": {
+          "items": {
+            "$ref": "#/definitions/Alert"
+          },
+          "type": "array",
+          "title": "Alerts"
+        },
+        "ownership_gap_ci_ids": {
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "type": "array",
+          "title": "Ownership Gap Ci Ids"
+        },
+        "uncertainty": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Uncertainty"
+        },
+        "human_review_required": {
+          "type": "boolean",
+          "enum": [
+            true
+          ],
+          "title": "Human Review Required"
+        }
+      },
+      "type": "object",
+      "required": [
+        "failed_ci",
+        "fix",
+        "affected",
+        "down_ci_ids",
+        "at_risk_ci_ids",
+        "additional_cis_down",
+        "degraded_clusters",
+        "alerts",
+        "ownership_gap_ci_ids",
+        "uncertainty",
+        "human_review_required"
+      ],
+      "title": "ImpactResult"
+    },
+    "Ownership": {
+      "properties": {
+        "ci": {
+          "$ref": "#/definitions/CI"
+        },
+        "contacts": {
+          "items": {
+            "$ref": "#/definitions/Contact"
+          },
+          "type": "array",
+          "title": "Contacts"
+        }
+      },
+      "type": "object",
+      "required": [
+        "ci",
+        "contacts"
+      ],
+      "title": "Ownership"
+    },
+    "SearchResult": {
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/definitions/CI"
+          },
+          "type": "array",
+          "title": "Candidates"
+        },
+        "truncated": {
+          "type": "boolean",
+          "title": "Truncated"
+        }
+      },
+      "type": "object",
+      "required": [
+        "candidates",
+        "truncated"
+      ],
+      "title": "SearchResult"
+    },
+    "ValidationError": {
+      "properties": {
+        "loc": {
+          "items": {
+            "description": "Either a string or an integer when provided."
+          },
+          "type": "array",
+          "title": "Location"
+        },
+        "msg": {
+          "type": "string",
+          "title": "Message"
+        },
+        "type": {
+          "type": "string",
+          "title": "Error Type"
+        },
+        "input": {
+          "title": "Input"
+        },
+        "ctx": {
+          "type": "object",
+          "title": "Context"
+        }
+      },
+      "type": "object",
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ],
+      "title": "ValidationError"
+    }
+  }
+}

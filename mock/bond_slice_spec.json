@@ -1,0 +1,3998 @@
+{
+ "meta": {
+  "mock_marker": "New records: short_description starts \"MOCK demo\". New cmdb_rel_ci rows cannot carry text: ledger records sys_id, parent, type, child. Field updates: ledger records old and new.",
+  "mock_domain": "acme-mock.example",
+  "ip_plan": {
+   "10.2.40.0/24": "NY datacenter server VLAN, gateway 10.2.40.1 = ny8500-nbxs09 (existing)",
+   "10.2.42.0/24": "NY storage VLAN (nas200 10.2.42.20)",
+   "10.0.0.0/24": "NY network/device management (existing routers .1-.3, IP-Switch-1 .4; IP-Storage-Sw-1 .5, UPS NMC .21)",
+   "10.4.30.0/24": "London DR server VLAN, gateway 10.4.30.1 (LAN side of DataNoc.gw01)"
+  },
+  "build_order": [
+   "pre-check: duplicates by name; live old values == spec old values; snapshot life_cycle_stage and life_cycle_stage_status of every record to update (business rule \"Update life cycle from legacy\" derives them on ANY update while they are empty); live row of each DELETES entry == spec",
+   "insert business_app, new_cis; read back sys_id and number; check alm_asset by ci",
+   "apply updates one record at a time (Oracle 11i after the inserts: db_server takes the new dbaix950ldn sys_id); re-read; log every changed field plus life_cycle_stage and life_cycle_stage_status; any non-200 response or an \"error\" key in the body is a failed update (\"Validate lifecycle combination\" can abort it)",
+   "delete the 4 DELETES rows (ledger keeps each full row)",
+   "loop check: re-run the generator's loop check against live cmdb_rel_ci (minus the deleted rows), then insert relationships in id order; any non-201 response is a failure. The PDI does not reject loops: \"Prevent Recursion in CI Relationships\" only blocks child == parent",
+   "write alerts to out/pdi/em_alert.json"
+  ],
+  "expected_after_build": {
+   "ci_classes": 36,
+   "cis": 2788,
+   "cmdb_rel_ci": 271
+  },
+  "outage_carrying_types": {
+   "carrying": [
+    "Consumes::Consumed by",
+    "Depends on::Used by",
+    "Runs on::Runs",
+    "Hosted on::Hosts",
+    "Applicative Flow To::Applicative Flow From",
+    "Members::Member of",
+    "Connects to::Connected by",
+    "Connected by::Connects",
+    "In Rack::Rack contains",
+    "Contains::Contained by (component in a server)"
+   ],
+   "not_carrying": [
+    "Receives data from::Sends data to",
+    "Exchanges data with::Exchanges data with",
+    "Located in::Houses",
+    "Located In::Contains Room",
+    "Located in Zone::Zone contains",
+    "DR provided by::Provides DR for",
+    "Contains::Contained by (service group or service grouping)"
+   ],
+   "rule": "a child's failure reaches its parent over carrying types; the per-row relationships[].outage_carrying flag is the source"
+  },
+  "em_alert_format": "list of records in the download shape {field: {value, display_value}}, including \"synthetic\": {\"value\": \"true\", \"display_value\": \"true\"}. Time fields: value is UTC, display_value is the PDI user's time zone (Europe/London, UTC+1 on 2026-09-14), as the Table API returns them; join alerts to incidents on value only.",
+  "em_alert_fields": {
+   "initial_remote_time": "UI label \"Initial event generation time\" (\"Time that the initial event occurred in the remote system\"); no field initial_event_generation_time exists",
+   "group_source": "UI column \"Group\": automated, rules-based, manual, CMDB, secondary or none. Numeric choice codes not verified (no em_alert on the PDI), so value carries the label",
+   "correlation_rule_group": "0 None, 1 Primary, 2 Secondary (ServiceNow correlation-rule template)",
+   "sources": [
+    "https://www.servicenow.com/docs/r/Tm19yM2Ui3~uN9XFBacppg/bhN9tpP8s~hCtbJBdqBk3g (Monitor incoming alerts, Yokohama: labels Initial event generation time, Group, Parent, Source, Node, Metric Name)",
+    "https://www.servicenow.com/docs/r/guxhDnVk8OUAJKLm7WZsYA/gCDVSVoWXal2NZ6z9~4SNQ (Event field format: source, event_class, node, type, resource, metric_name, message_key)",
+    "https://github.com/tedorigawa001/ServiceNow-MCP/blob/main/src/tools/event-management.ts (em_alert column names incl. initial_remote_time, last_remote_time, group_source, is_group_alert, parent, incident)",
+    "https://github.com/suchcodewow/TangibleMonkey/blob/master/hotday_dynatrace_servicenow/AlertCorrelationRule/dt_alert_correlation_rule.xml (correlation_rule_group codes)"
+   ]
+  },
+  "em_alert_correlation": "The group is made by 'MOCK topology rule: storage CI -> dependent CIs (CMDB relationships, 15 min window)', named in the primary's additional_info.correlation_rule. The shipped Dynatrace rule would group only alerts sharing a problem_id and make dbaix900nyc (isRootCause true) the primary; isRootCause is Dynatrace's own verdict, not ServiceNow's grouping.",
+  "deviations": [
+   "Service group All cannot be renamed: business rule Check group name uniqueness aborts any change to the group named All (Changes on the group All are not allowed). A new service group Trading Services is created instead (parent_group set to All by that rule); R03 and R04 point to it. New CIs 3, CIs after build 2788."
+  ]
+ },
+ "business_app": {
+  "local_key": "BA",
+  "table": "cmdb_ci_business_app",
+  "fields": {
+   "name": "Bond Trading",
+   "short_description": "MOCK demo: Bond Trading business application (portfolio record). Consumes the services Bond Trading (production, New York) and Bond Trading - DR (standby, London). Owners copied from the service Bond Trading.",
+   "owned_by": "5f675796c0a8010e0132f67844388c58",
+   "it_application_owner": "5f64f1dac0a8010e0020272962540240",
+   "support_group": "5f6441efc0a8010e0177fcb589156352",
+   "change_control": "5f63e48fc0a8010e00eeaad81cd4dd37",
+   "location": "5f669b59c0a8010e00209343c0c6f9c1",
+   "install_status": "1",
+   "operational_status": "1",
+   "environment": "Production",
+   "business_criticality": "high",
+   "emergency_tier": "mission_critical",
+   "application_type": "homegrown",
+   "architecture_type": "n_tier",
+   "install_type": "on_premise",
+   "platform": "unix",
+   "technology_stack": "java",
+   "user_base": "499",
+   "data_classification": "confidential",
+   "discovery_source": "Manual Entry"
+  },
+  "do_not_send": [
+   "number (auto APM prefix)",
+   "model_id (would trigger Create Asset on insert)"
+  ],
+  "pre_check": "GET cmdb_ci_business_app?sysparm_query=name=Bond Trading must return 0 rows (business rule 'Check for duplicate App name')"
+ },
+ "new_cis": [
+  {
+   "local_key": "N_LNXLDN100",
+   "table": "cmdb_ci_linux_server",
+   "fields": {
+    "name": "lnxldn100",
+    "short_description": "MOCK demo: DR web/app host for Bond Trading - DR (warm standby, London). Counterpart of lnux100 (web) and unix201 (Java app server) in New York.",
+    "host_name": "lnxldn100",
+    "fqdn": "lnxldn100.ldn.acme-mock.example",
+    "dns_domain": "ldn.acme-mock.example",
+    "ip_address": "10.4.30.11",
+    "default_gateway": "10.4.30.1",
+    "serial_number": "IR5875-L4D0311",
+    "manufacturer": "c115c2f737e3100044e0bfc8bcbe5d46",
+    "os": "Linux Red Hat",
+    "os_version": "2.6.9-22.0.1.ELsmp",
+    "classification": "Disaster Recovery",
+    "environment": "Production",
+    "location": "8225b668ac1d55eb679878e192fca315",
+    "support_group": "8a5055c9c61122780043563ef53438e3",
+    "install_status": "1",
+    "operational_status": "1",
+    "discovery_source": "Manual Entry"
+   },
+   "do_not_send": [
+    "model_id (would trigger Create Asset on insert)"
+   ],
+   "pre_check": "GET cmdb_ci_linux_server?sysparm_query=name=lnxldn100 must return 0 rows"
+  },
+  {
+   "local_key": "N_DBAIX950LDN",
+   "table": "cmdb_ci_aix_server",
+   "fields": {
+    "name": "dbaix950ldn",
+    "short_description": "MOCK demo: DR database host for Bond Trading - DR (London). Hosts the standby database Oracle 11i, which receives redo from bond_trade_ny.",
+    "host_name": "dbaix950ldn",
+    "fqdn": "dbaix950ldn.ldn.acme-mock.example",
+    "dns_domain": "ldn.acme-mock.example",
+    "ip_address": "10.4.30.31",
+    "default_gateway": "10.4.30.1",
+    "serial_number": "KQ7R4L9",
+    "manufacturer": "b7e7c073c0a801690143e7b7d29eb408",
+    "os": "AIX",
+    "os_version": "5L",
+    "classification": "Disaster Recovery",
+    "environment": "Production",
+    "location": "8225b668ac1d55eb679878e192fca315",
+    "support_group": "8a5055c9c61122780043563ef53438e3",
+    "install_status": "1",
+    "operational_status": "1",
+    "discovery_source": "Manual Entry"
+   },
+   "do_not_send": [
+    "model_id (would trigger Create Asset on insert)"
+   ],
+   "pre_check": "GET cmdb_ci_aix_server?sysparm_query=name=dbaix950ldn must return 0 rows"
+  },
+  {
+   "local_key": "N_TRADING_SERVICES",
+   "table": "cmdb_ci_service_group",
+   "fields": {
+    "name": "Trading Services",
+    "short_description": "MOCK demo: service group of the Bond Trading services (production and DR). Child of the protected root group All."
+   },
+   "do_not_send": [
+    "parent_group (business rule Check group name uniqueness sets it to All)"
+   ],
+   "pre_check": "GET cmdb_ci_service_group?sysparm_query=name=Trading Services must return 0 rows"
+  }
+ ],
+ "updates": [
+  {
+   "table": "cmdb_ci_service",
+   "sys_id": "63036c18c0a8010e01bac272daed2e2c",
+   "name": "Bond Trading - DR",
+   "why": "DR service lives in London and reads as standby",
+   "fields": {
+    "location": {
+     "old": "5f669b59c0a8010e00209343c0c6f9c1",
+     "old_display": "450 Lexington Avenue, New York,NY",
+     "new": "8225b668ac1d55eb679878e192fca315",
+     "kind": "overwrite"
+    },
+    "operational_status": {
+     "old": "1",
+     "old_display": "Operational",
+     "new": "4",
+     "kind": "overwrite"
+    },
+    "used_for": {
+     "old": "Production",
+     "old_display": "Production",
+     "new": "Disaster recovery",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_web_server",
+   "sys_id": "5397fa53c0a8016400f562cb29027855",
+   "name": "apache linux ny 100",
+   "why": "web tier: listens on lnux100",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.11",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "bondtrading.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "tcp_port": {
+     "old": "",
+     "old_display": "",
+     "new": "443",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_appl",
+   "sys_id": "829e953a0ad3370200af63483498b1ea",
+   "name": "CMS App FLX",
+   "why": "app component deployed on unix201; owned by the Bond Trading app team",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.21",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "unix201.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f6441efc0a8010e0177fcb589156352",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_app_server_java",
+   "sys_id": "82992eb60ad337024fbb6d06a866c636",
+   "name": "Java Application Server FLX",
+   "why": "Java app tier runs on unix201 in the NY datacenter",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.21",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "unix201.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "tcp_port": {
+     "old": "",
+     "old_display": "",
+     "new": "8443",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f6441efc0a8010e0177fcb589156352",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "108752c8c611227501d4ab0e392ba97f",
+     "old_display": "San Diego",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_email_server",
+   "sys_id": "28110ea1c0a8000b003abee48ecbc3fa",
+   "name": "EXCHANGE-NY-02",
+   "why": "mail server that sends trade confirmations",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.51",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "exchange-ny-02.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_linux_server",
+   "sys_id": "53958ff0c0a801640171ec76aa0c8f86",
+   "name": "lnux100",
+   "why": "web host, moved into rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.11",
+     "kind": "fill_empty"
+    },
+    "host_name": {
+     "old": "",
+     "old_display": "",
+     "new": "lnux100",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "lnux100.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "IR5875-N4Y0100",
+     "kind": "fill_empty"
+    },
+    "default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "25ab9f690a0a0bb3001c5fec1d0d7bcb",
+     "old_display": "322 West 52nd Street, New York,NY",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_unix_server",
+   "sys_id": "53979c53c0a801640116ad2044643fb2",
+   "name": "unix201",
+   "why": "app host, moved into rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.21",
+     "kind": "fill_empty"
+    },
+    "host_name": {
+     "old": "",
+     "old_display": "",
+     "new": "unix201",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "unix201.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "0938FM2011",
+     "kind": "fill_empty"
+    },
+    "default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "8228cda2ac1d55eb7029baf443945c37",
+     "old_display": "Bockenheimer Landstraße 123, Frankfurt",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_unix_server",
+   "sys_id": "5f7dfd9cc0a8010e00ab58006f14bdc5",
+   "name": "dbaix900nyc",
+   "why": "Oracle RAC node, moved into rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.31",
+     "kind": "fill_empty"
+    },
+    "host_name": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix900nyc",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix900nyc.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "KQ7R4A1",
+     "kind": "fill_empty"
+    },
+    "default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "8228cda2ac1d55eb7029baf443945c37",
+     "old_display": "Bockenheimer Landstraße 123, Frankfurt",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_unix_server",
+   "sys_id": "5f9b83bfc0a8010e005a2b3212c9dc07",
+   "name": "dbaix901nyc",
+   "why": "Oracle RAC node, moved into rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.32",
+     "kind": "fill_empty"
+    },
+    "host_name": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix901nyc",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix901nyc.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "KQ7R4A2",
+     "kind": "fill_empty"
+    },
+    "default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "8228cda2ac1d55eb7029baf443945c37",
+     "old_display": "Bockenheimer Landstraße 123, Frankfurt",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_unix_server",
+   "sys_id": "5f9ba346c0a8010e00158183aaa1eb24",
+   "name": "dbaix902nyc",
+   "why": "Oracle RAC node, moved into rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.33",
+     "kind": "fill_empty"
+    },
+    "host_name": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix902nyc",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix902nyc.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "KQ7R4A3",
+     "kind": "fill_empty"
+    },
+    "default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "8228cda2ac1d55eb7029baf443945c37",
+     "old_display": "Bockenheimer Landstraße 123, Frankfurt",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_server",
+   "sys_id": "b0cbf176c0a80009002b452bc33e2fc3",
+   "name": "DatabaseServer1",
+   "why": "hosts MySQL FLX; already in rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.41",
+     "kind": "fill_empty"
+    },
+    "host_name": {
+     "old": "",
+     "old_display": "",
+     "new": "databaseserver1",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "databaseserver1.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "7KQ2M41",
+     "kind": "fill_empty"
+    },
+    "default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "f48b21c20a0a0ba70037c842dbb8ffe0",
+     "old_display": "4193 University Avenue, San Diego,CA",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_server",
+   "sys_id": "14a9e27bc61122750037b90c4d34da38",
+   "name": "DatabaseServer2",
+   "why": "already in rack NY-01-01; location made to match the rack",
+   "fields": {
+    "location": {
+     "old": "f48b21c20a0a0ba70037c842dbb8ffe0",
+     "old_display": "4193 University Avenue, San Diego,CA",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_database",
+   "sys_id": "5f97fe23c0a8010e01ef3cb03c20c7f5",
+   "name": "NY RAC",
+   "why": "RAC database; clients connect through the SCAN listener",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.35",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "nyrac-scan.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_database",
+   "sys_id": "55c3578bc0a8010e0117f727897d0011",
+   "name": "bond_trade_ny",
+   "why": "production trade database on NY RAC",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.35",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "nyrac-scan.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_database",
+   "sys_id": "55c38564c0a8010e00596302eb0d26bc",
+   "name": "bond_trade_uk",
+   "why": "UK book database on NY RAC",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.35",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "nyrac-scan.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_db_ora_catalog",
+   "sys_id": "82967cdd0ad3370236092104ce988d76",
+   "name": "Oracle FLX",
+   "why": "schema catalog in NY RAC",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.35",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "nyrac-scan.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_db_mysql_catalog",
+   "sys_id": "8296b5ae0ad3370227dac480f0fc66dd",
+   "name": "MySQL FLX",
+   "why": "session/reference catalog on DatabaseServer1",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.41",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "databaseserver1.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_cluster",
+   "sys_id": "5fd1aa38c0a8010e014f2ef246f3eba3",
+   "name": "nyc oracle rac cluster",
+   "why": "Oracle Clusterware for NY RAC",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.30",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "nycrac-clu.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_cluster_node",
+   "sys_id": "a29395190a0004954108310b382033f4",
+   "name": "Node 1",
+   "why": "cluster node on dbaix900nyc",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.31",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix900nyc.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_cluster_node",
+   "sys_id": "a294c1dd0a0004955e76682f300fb068",
+   "name": "Node 2",
+   "why": "cluster node on dbaix901nyc",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.32",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix901nyc.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_cluster_node",
+   "sys_id": "a294fb730a00049533710d933f011c57",
+   "name": "Node 3",
+   "why": "cluster node on dbaix902nyc",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.33",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix902nyc.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "5f74727dc0a8010e01efe33a251993f9",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_database",
+   "sys_id": "aedc0e337f000001015b81bd61107aef",
+   "name": "Oracle 11i",
+   "why": "standby database for Bond Trading - DR in London; renamed so impact results read as a standby of bond_trade_ny (Oracle 11i is an E-Business Suite release name); db_server re-pointed from DatabaseServer1 (New York) to the new London host. Run after the new CIs are inserted.",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.4.30.31",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "dbaix950ldn.ldn.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "type": {
+     "old": "",
+     "old_display": "",
+     "new": "Oracle",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ee6fea9fe198100ada7950d0b1b73",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "8225b668ac1d55eb679878e192fca315",
+     "kind": "fill_empty"
+    },
+    "short_description": {
+     "old": "",
+     "old_display": "",
+     "new": "MOCK demo: standby copy of bond_trade_ny for Bond Trading - DR (London), fed by log shipping. Renamed from Oracle 11i.",
+     "kind": "fill_empty"
+    },
+    "name": {
+     "old": "Oracle 11i",
+     "old_display": "Oracle 11i",
+     "new": "bond_trade_ny_stby",
+     "kind": "overwrite"
+    },
+    "operational_status": {
+     "old": "1",
+     "old_display": "Operational",
+     "new": "4",
+     "kind": "overwrite"
+    },
+    "db_server": {
+     "old": "b0cbf176c0a80009002b452bc33e2fc3",
+     "old_display": "DatabaseServer1",
+     "new": "N_DBAIX950LDN",
+     "kind": "overwrite",
+     "new_is_local_key": true
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_msd",
+   "sys_id": "5fd00a81c0a8010e011635bd6a50fb64",
+   "name": "nyc rac nas200",
+   "why": "shared RAC storage; outage origin (INC0000049)",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.42.20",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "nas200.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "f48b21c20a0a0ba70037c842dbb8ffe0",
+     "old_display": "4193 University Avenue, San Diego,CA",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_disk",
+   "sys_id": "62d22f18c0a8010e01d430ea7f3e4f8e",
+   "name": "local hd",
+   "why": "local boot disk of dbaix901nyc",
+   "fields": {
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "Z1Z4K9A2",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_storage_switch",
+   "sys_id": "109481257f701200bee45f19befa91f5",
+   "name": "IP-Storage-Sw-1",
+   "why": "storage fabric switch between RAC nodes and nas200",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.0.0.5",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ip-storage-sw-1.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "JAF1935ABCQ",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_ip_switch",
+   "sys_id": "304481257f701200bee45f19befa915b",
+   "name": "IP-Switch-1",
+   "why": "top-of-rack access switch for the Bond Trading hosts",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ip-switch-1.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "FOC1932X0K4",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_ip_router",
+   "sys_id": "1743cde17f701200bee45f19befa917b",
+   "name": "IP-Router-1",
+   "why": "NY datacenter core router (existing chain into IP-Switch-1)",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ip-router-1.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "FTX1840A1B1",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_ip_router",
+   "sys_id": "6fa301257f701200bee45f19befa9164",
+   "name": "IP-Router-2",
+   "why": "NY datacenter core router (existing chain into IP-Switch-1)",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ip-router-2.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "FTX1840A1B2",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_ip_router",
+   "sys_id": "161441257f701200bee45f19befa91c2",
+   "name": "IP-Router-3",
+   "why": "NY datacenter core router (existing chain into IP-Switch-1)",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ip-router-3.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "FTX1840A1B3",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_netgear",
+   "sys_id": "55b37e80c0a8010e00028a1d1a14e2d7",
+   "name": "ny8500-nbxs09",
+   "why": "NY datacenter site gateway (10.2.40.1); uplink of IP-Switch-1",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ny8500-nbxs09.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "SAL1741MXQ2",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_netgear",
+   "sys_id": "55b35562c0a8010e01cff22378e0aea9",
+   "name": "ny8500-nbxs08",
+   "why": "existing user-access switch of Bond Trading (New Castle DE)",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ny8500-nbxs08.ncd.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "SAL1741MXP9",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_network_adapter",
+   "sys_id": "fad823f67f0000010186d3153258344c",
+   "name": "eth0",
+   "why": "re-point the spare NIC from a laptop to lnux100",
+   "fields": {
+    "netmask": {
+     "old": "",
+     "old_display": "",
+     "new": "255.255.255.0",
+     "kind": "fill_empty"
+    },
+    "ip_default_gateway": {
+     "old": "",
+     "old_display": "",
+     "new": "10.2.40.1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "8a5055c9c61122780043563ef53438e3",
+     "kind": "fill_empty"
+    },
+    "cmdb_ci": {
+     "old": "a9a2d111c611227601fb37542399caa8",
+     "old_display": "*JEMPLOYEE-IBM",
+     "new": "53958ff0c0a801640171ec76aa0c8f86",
+     "kind": "overwrite"
+    },
+    "ip_address": {
+     "old": "0.0.0.0",
+     "old_display": "0.0.0.0",
+     "new": "10.2.40.11",
+     "kind": "overwrite"
+    },
+    "dhcp_enabled": {
+     "old": "true",
+     "old_display": "true",
+     "new": "false",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_netgear",
+   "sys_id": "108a9205c611227500786e160f9d343e",
+   "name": "DataNoc.gw01.lanset.net",
+   "why": "London site WAN gateway for the DR hosts",
+   "fields": {
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "DataNoc.gw01.lanset.net",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "LBADTN1931AB042",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "287ebd7da9fe198100f92cc8d1d2154e",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "25ab92490a0a0bb30070567e7225ec2b",
+     "old_display": "3191 Grand Avenue, Coconut Grove,FL",
+     "new": "8225b668ac1d55eb679878e192fca315",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_rack",
+   "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+   "name": "NY-01-01",
+   "why": "rack of the Bond Trading hosts; was located in Tokyo",
+   "fields": {
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "ZA1748012345",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "26b8a93db7517210693cfeb0be11a93c",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "0002c0a93790200044e0bfc8bcbe5df5",
+     "old_display": "2-10-1 Yurakucho, Chiyoda-ku, Tokyo",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "overwrite"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_zone",
+   "sys_id": "e8119da50a0a0aa700b645ce093e0bd8",
+   "name": "NY1A",
+   "why": "zone of rack NY-01-01",
+   "fields": {
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "26b8a93db7517210693cfeb0be11a93c",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_computer_room",
+   "sys_id": "e7a285070a0a0aa700520a59843ec88a",
+   "name": "NY Floor 1",
+   "why": "computer room of zone NY1A",
+   "fields": {
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "26b8a93db7517210693cfeb0be11a93c",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_datacenter",
+   "sys_id": "e7a2ebd40a0a0aa700c5435914771e0b",
+   "name": "New York",
+   "why": "datacenter at 450 Lexington",
+   "fields": {
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "26b8a93db7517210693cfeb0be11a93c",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_ups",
+   "sys_id": "dfc365aabf2111007c94c0647e0739a2",
+   "name": "UPS New York",
+   "why": "feeds rack NY-01-01",
+   "fields": {
+    "ip_address": {
+     "old": "",
+     "old_display": "",
+     "new": "10.0.0.21",
+     "kind": "fill_empty"
+    },
+    "fqdn": {
+     "old": "",
+     "old_display": "",
+     "new": "ups-ny.nyc.acme-mock.example",
+     "kind": "fill_empty"
+    },
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "3MZ8RQ2",
+     "kind": "fill_empty"
+    },
+    "location": {
+     "old": "",
+     "old_display": "",
+     "new": "5f669b59c0a8010e00209343c0c6f9c1",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "26b8a93db7517210693cfeb0be11a93c",
+     "kind": "fill_empty"
+    }
+   }
+  },
+  {
+   "table": "cmdb_ci_rack",
+   "sys_id": "2e7f5eda3720200044e0bfc8bcbe5d92",
+   "name": "42U 3100 SP2 NetShelter Rack",
+   "why": "DR rack, 3 Whitehall Court",
+   "fields": {
+    "serial_number": {
+     "old": "",
+     "old_display": "",
+     "new": "ZA1932012345",
+     "kind": "fill_empty"
+    },
+    "support_group": {
+     "old": "",
+     "old_display": "",
+     "new": "26b8a93db7517210693cfeb0be11a93c",
+     "kind": "fill_empty"
+    }
+   }
+  }
+ ],
+ "deletes": [
+  {
+   "sys_id": "2eadd5297f701200bee45f19befa91fa",
+   "parent": "IP-Switch-1",
+   "type": "Depends on::Used by",
+   "child": "SAP-Win-App-Cluster",
+   "replaced_by": "SAP-Win-App-Cluster -Connects to-> IP-Switch-1",
+   "why": "read backwards: with the new host uplinks to IP-Switch-1, a SAP Windows node failure walked up to Bond Trading (Sap1 -> SAP-Win-App-Cluster -> IP-Switch-1 -> NY hosts -> Bond Trading)",
+   "connection_strength": "Always",
+   "parent_sys_id": "304481257f701200bee45f19befa915b",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child_sys_id": "b267bbdd7f301200bee45f19befa9172"
+  },
+  {
+   "sys_id": "90ed19297f701200bee45f19befa91b3",
+   "parent": "IP-Storage-Sw-1",
+   "type": "Depends on::Used by",
+   "child": "SAP-SD-WIN-Cluster",
+   "replaced_by": "SAP-SD-WIN-Cluster -Connects to-> IP-Storage-Sw-1",
+   "why": "read backwards: Storage-D1..4 -> SAP-SD-WIN-Cluster -> IP-Storage-Sw-1 -> RAC nodes -> Bond Trading",
+   "connection_strength": "Always",
+   "parent_sys_id": "109481257f701200bee45f19befa91f5",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child_sys_id": "e297bbdd7f301200bee45f19befa91eb"
+  },
+  {
+   "sys_id": "3a372d7a0a0a0bb40071ec16eb5f517c",
+   "parent": "ny8500-nbxs08",
+   "type": "Connects to::Connected by",
+   "child": "PS LoadBal01",
+   "replaced_by": "PS LoadBal01 -Connects to-> ny8500-nbxs08",
+   "why": "read backwards: a PeopleSoft load balancer failure walked up to Bond Trading through its switch",
+   "connection_strength": "Always",
+   "parent_sys_id": "55b35562c0a8010e01cff22378e0aea9",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child_sys_id": "3a172e820a0a0bb40034228e9f65f1be"
+  },
+  {
+   "sys_id": "ef5cd1297f701200bee45f19befa91e4",
+   "parent": "IP-Switch-1",
+   "type": "Depends on::Used by",
+   "child": "IP-Storage-Sw-1",
+   "replaced_by": null,
+   "why": "a storage-switch fault walked to every NY host via IP-Switch-1 and read as a full front-end outage; the RAC nodes already reach the storage switch directly (storage fabric kept separate from the LAN)",
+   "connection_strength": "Always",
+   "parent_sys_id": "304481257f701200bee45f19befa915b",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child_sys_id": "109481257f701200bee45f19befa91f5"
+  }
+ ],
+ "relationships": [
+  {
+   "id": "R01",
+   "parent": {
+    "local_key": "BA",
+    "name": "Bond Trading (business app)"
+   },
+   "type": "Consumes::Consumed by",
+   "type_sys_id": "41008aa6ef32010098d5925495c0fb94",
+   "child": {
+    "sys_id": "451047c6c0a8016400de0ae6df9b9d76",
+    "name": "Bond Trading"
+   },
+   "why": "business app consumes its production service",
+   "outage_carrying": true
+  },
+  {
+   "id": "R02",
+   "parent": {
+    "local_key": "BA",
+    "name": "Bond Trading (business app)"
+   },
+   "type": "Consumes::Consumed by",
+   "type_sys_id": "41008aa6ef32010098d5925495c0fb94",
+   "child": {
+    "sys_id": "63036c18c0a8010e01bac272daed2e2c",
+    "name": "Bond Trading - DR"
+   },
+   "why": "business app consumes its DR service",
+   "outage_carrying": true
+  },
+  {
+   "id": "R03",
+   "parent": {
+    "local_key": "N_TRADING_SERVICES",
+    "name": "Trading Services"
+   },
+   "type": "Contains::Contained by",
+   "type_sys_id": "55c95bf6c0a8010e0118ec7056ebc54d",
+   "child": {
+    "sys_id": "451047c6c0a8016400de0ae6df9b9d76",
+    "name": "Bond Trading"
+   },
+   "why": "service group holds the service",
+   "outage_carrying": false
+  },
+  {
+   "id": "R04",
+   "parent": {
+    "local_key": "N_TRADING_SERVICES",
+    "name": "Trading Services"
+   },
+   "type": "Contains::Contained by",
+   "type_sys_id": "55c95bf6c0a8010e0118ec7056ebc54d",
+   "child": {
+    "sys_id": "63036c18c0a8010e01bac272daed2e2c",
+    "name": "Bond Trading - DR"
+   },
+   "why": "service group holds the DR service",
+   "outage_carrying": false
+  },
+  {
+   "id": "R05",
+   "parent": {
+    "sys_id": "451047c6c0a8016400de0ae6df9b9d76",
+    "name": "Bond Trading"
+   },
+   "type": "Depends on::Used by",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child": {
+    "sys_id": "829e953a0ad3370200af63483498b1ea",
+    "name": "CMS App FLX"
+   },
+   "why": "service uses the trading app component",
+   "outage_carrying": true
+  },
+  {
+   "id": "R06",
+   "parent": {
+    "sys_id": "829e953a0ad3370200af63483498b1ea",
+    "name": "CMS App FLX"
+   },
+   "type": "Runs on::Runs",
+   "type_sys_id": "60bc4e22c0a8010e01f074cbe6bd73c3",
+   "child": {
+    "sys_id": "53979c53c0a801640116ad2044643fb2",
+    "name": "unix201"
+   },
+   "why": "app component deployed on the app host (appl Runs on unix_server)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R07",
+   "parent": {
+    "sys_id": "5397fa53c0a8016400f562cb29027855",
+    "name": "apache linux ny 100"
+   },
+   "type": "Runs on::Runs",
+   "type_sys_id": "60bc4e22c0a8010e01f074cbe6bd73c3",
+   "child": {
+    "sys_id": "53958ff0c0a801640171ec76aa0c8f86",
+    "name": "lnux100"
+   },
+   "why": "web server runs on its Linux host (suggested pair)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R08",
+   "parent": {
+    "sys_id": "5397fa53c0a8016400f562cb29027855",
+    "name": "apache linux ny 100"
+   },
+   "type": "Applicative Flow To::Applicative Flow From",
+   "type_sys_id": "85d98503ff100200d699ffffffffff8c",
+   "child": {
+    "sys_id": "82992eb60ad337024fbb6d06a866c636",
+    "name": "Java Application Server FLX"
+   },
+   "why": "web tier forwards requests to the Java app tier",
+   "outage_carrying": true
+  },
+  {
+   "id": "R09",
+   "parent": {
+    "sys_id": "82992eb60ad337024fbb6d06a866c636",
+    "name": "Java Application Server FLX"
+   },
+   "type": "Runs on::Runs",
+   "type_sys_id": "60bc4e22c0a8010e01f074cbe6bd73c3",
+   "child": {
+    "sys_id": "53979c53c0a801640116ad2044643fb2",
+    "name": "unix201"
+   },
+   "why": "Java app server runs on unix201",
+   "outage_carrying": true
+  },
+  {
+   "id": "R10",
+   "parent": {
+    "sys_id": "82992eb60ad337024fbb6d06a866c636",
+    "name": "Java Application Server FLX"
+   },
+   "type": "Depends on::Used by",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child": {
+    "sys_id": "55c3578bc0a8010e0117f727897d0011",
+    "name": "bond_trade_ny"
+   },
+   "why": "app tier reads/writes trades (appl Depends on database)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R11",
+   "parent": {
+    "sys_id": "82967cdd0ad3370236092104ce988d76",
+    "name": "Oracle FLX"
+   },
+   "type": "Hosted on::Hosts",
+   "type_sys_id": "5f985e0ec0a8010e00a9714f2a172815",
+   "child": {
+    "sys_id": "5f97fe23c0a8010e01ef3cb03c20c7f5",
+    "name": "NY RAC"
+   },
+   "why": "schema catalog lives in the RAC database",
+   "outage_carrying": true
+  },
+  {
+   "id": "R12",
+   "parent": {
+    "sys_id": "8296b5ae0ad3370227dac480f0fc66dd",
+    "name": "MySQL FLX"
+   },
+   "type": "Hosted on::Hosts",
+   "type_sys_id": "5f985e0ec0a8010e00a9714f2a172815",
+   "child": {
+    "sys_id": "b0cbf176c0a80009002b452bc33e2fc3",
+    "name": "DatabaseServer1"
+   },
+   "why": "MySQL catalog lives on DatabaseServer1",
+   "outage_carrying": true
+  },
+  {
+   "id": "R13",
+   "parent": {
+    "sys_id": "28110ea1c0a8000b003abee48ecbc3fa",
+    "name": "EXCHANGE-NY-02"
+   },
+   "type": "Receives data from::Sends data to",
+   "type_sys_id": "607b15e1c0a8010e00a4413059767eec",
+   "child": {
+    "sys_id": "82992eb60ad337024fbb6d06a866c636",
+    "name": "Java Application Server FLX"
+   },
+   "why": "app server sends trade confirmations by mail (data flow)",
+   "outage_carrying": false
+  },
+  {
+   "id": "R14",
+   "parent": {
+    "sys_id": "55c3578bc0a8010e0117f727897d0011",
+    "name": "bond_trade_ny"
+   },
+   "type": "Receives data from::Sends data to",
+   "type_sys_id": "607b15e1c0a8010e00a4413059767eec",
+   "child": {
+    "sys_id": "2216daf0d7820200c1ed0fbc5e6103ca",
+    "name": "bond_trade_aus"
+   },
+   "why": "Sydney book feeds NY (data flow)",
+   "outage_carrying": false
+  },
+  {
+   "id": "R15",
+   "parent": {
+    "sys_id": "55c3578bc0a8010e0117f727897d0011",
+    "name": "bond_trade_ny"
+   },
+   "type": "Exchanges data with::Exchanges data with",
+   "type_sys_id": "607ad1b2c0a8010e01941856b365af90",
+   "child": {
+    "sys_id": "55c38564c0a8010e00596302eb0d26bc",
+    "name": "bond_trade_uk"
+   },
+   "why": "NY and UK books sync (data flow)",
+   "outage_carrying": false
+  },
+  {
+   "id": "R16",
+   "parent": {
+    "sys_id": "5fd1aa38c0a8010e014f2ef246f3eba3",
+    "name": "nyc oracle rac cluster"
+   },
+   "type": "Members::Member of",
+   "type_sys_id": "55c913d3c0a8010e012d1563182d6050",
+   "child": {
+    "sys_id": "a29395190a0004954108310b382033f4",
+    "name": "Node 1"
+   },
+   "why": "cluster node record (reference field already set)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R17",
+   "parent": {
+    "sys_id": "a29395190a0004954108310b382033f4",
+    "name": "Node 1"
+   },
+   "type": "Hosted on::Hosts",
+   "type_sys_id": "5f985e0ec0a8010e00a9714f2a172815",
+   "child": {
+    "sys_id": "5f7dfd9cc0a8010e00ab58006f14bdc5",
+    "name": "dbaix900nyc"
+   },
+   "why": "cluster node runs on its server (suggested pair)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R18",
+   "parent": {
+    "sys_id": "5fd1aa38c0a8010e014f2ef246f3eba3",
+    "name": "nyc oracle rac cluster"
+   },
+   "type": "Members::Member of",
+   "type_sys_id": "55c913d3c0a8010e012d1563182d6050",
+   "child": {
+    "sys_id": "a294c1dd0a0004955e76682f300fb068",
+    "name": "Node 2"
+   },
+   "why": "cluster node record (reference field already set)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R19",
+   "parent": {
+    "sys_id": "a294c1dd0a0004955e76682f300fb068",
+    "name": "Node 2"
+   },
+   "type": "Hosted on::Hosts",
+   "type_sys_id": "5f985e0ec0a8010e00a9714f2a172815",
+   "child": {
+    "sys_id": "5f9b83bfc0a8010e005a2b3212c9dc07",
+    "name": "dbaix901nyc"
+   },
+   "why": "cluster node runs on its server (suggested pair)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R20",
+   "parent": {
+    "sys_id": "5fd1aa38c0a8010e014f2ef246f3eba3",
+    "name": "nyc oracle rac cluster"
+   },
+   "type": "Members::Member of",
+   "type_sys_id": "55c913d3c0a8010e012d1563182d6050",
+   "child": {
+    "sys_id": "a294fb730a00049533710d933f011c57",
+    "name": "Node 3"
+   },
+   "why": "cluster node record (reference field already set)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R21",
+   "parent": {
+    "sys_id": "a294fb730a00049533710d933f011c57",
+    "name": "Node 3"
+   },
+   "type": "Hosted on::Hosts",
+   "type_sys_id": "5f985e0ec0a8010e00a9714f2a172815",
+   "child": {
+    "sys_id": "5f9ba346c0a8010e00158183aaa1eb24",
+    "name": "dbaix902nyc"
+   },
+   "why": "cluster node runs on its server (suggested pair)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R22",
+   "parent": {
+    "sys_id": "5f9b83bfc0a8010e005a2b3212c9dc07",
+    "name": "dbaix901nyc"
+   },
+   "type": "Contains::Contained by",
+   "type_sys_id": "55c95bf6c0a8010e0118ec7056ebc54d",
+   "child": {
+    "sys_id": "62d22f18c0a8010e01d430ea7f3e4f8e",
+    "name": "local hd (dbaix901nyc)"
+   },
+   "why": "server contains its local disk (computer field already set)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R23",
+   "parent": {
+    "sys_id": "53958ff0c0a801640171ec76aa0c8f86",
+    "name": "lnux100"
+   },
+   "type": "Contains::Contained by",
+   "type_sys_id": "55c95bf6c0a8010e0118ec7056ebc54d",
+   "child": {
+    "sys_id": "fad823f67f0000010186d3153258344c",
+    "name": "eth0"
+   },
+   "why": "server contains its NIC",
+   "outage_carrying": true
+  },
+  {
+   "id": "R24",
+   "parent": {
+    "sys_id": "53958ff0c0a801640171ec76aa0c8f86",
+    "name": "lnux100"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "host uplink to the top-of-rack switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R25",
+   "parent": {
+    "sys_id": "53979c53c0a801640116ad2044643fb2",
+    "name": "unix201"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "host uplink to the top-of-rack switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R26",
+   "parent": {
+    "sys_id": "5f7dfd9cc0a8010e00ab58006f14bdc5",
+    "name": "dbaix900nyc"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "host uplink to the top-of-rack switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R27",
+   "parent": {
+    "sys_id": "5f9b83bfc0a8010e005a2b3212c9dc07",
+    "name": "dbaix901nyc"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "host uplink to the top-of-rack switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R28",
+   "parent": {
+    "sys_id": "5f9ba346c0a8010e00158183aaa1eb24",
+    "name": "dbaix902nyc"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "host uplink to the top-of-rack switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R29",
+   "parent": {
+    "sys_id": "b0cbf176c0a80009002b452bc33e2fc3",
+    "name": "DatabaseServer1"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "host uplink to the top-of-rack switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R30",
+   "parent": {
+    "sys_id": "5f7dfd9cc0a8010e00ab58006f14bdc5",
+    "name": "dbaix900nyc"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "109481257f701200bee45f19befa91f5",
+    "name": "IP-Storage-Sw-1"
+   },
+   "why": "RAC node storage path",
+   "outage_carrying": true
+  },
+  {
+   "id": "R31",
+   "parent": {
+    "sys_id": "5f9b83bfc0a8010e005a2b3212c9dc07",
+    "name": "dbaix901nyc"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "109481257f701200bee45f19befa91f5",
+    "name": "IP-Storage-Sw-1"
+   },
+   "why": "RAC node storage path",
+   "outage_carrying": true
+  },
+  {
+   "id": "R32",
+   "parent": {
+    "sys_id": "5f9ba346c0a8010e00158183aaa1eb24",
+    "name": "dbaix902nyc"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "109481257f701200bee45f19befa91f5",
+    "name": "IP-Storage-Sw-1"
+   },
+   "why": "RAC node storage path",
+   "outage_carrying": true
+  },
+  {
+   "id": "R33",
+   "parent": {
+    "sys_id": "5fd00a81c0a8010e011635bd6a50fb64",
+    "name": "nyc rac nas200"
+   },
+   "type": "Connected by::Connects",
+   "type_sys_id": "3deab95338a02000c18673032c71b876",
+   "child": {
+    "sys_id": "109481257f701200bee45f19befa91f5",
+    "name": "IP-Storage-Sw-1"
+   },
+   "why": "NAS reached through the storage switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R34",
+   "parent": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "55b37e80c0a8010e00028a1d1a14e2d7",
+    "name": "ny8500-nbxs09"
+   },
+   "why": "access switch uplink to the site gateway",
+   "outage_carrying": true
+  },
+  {
+   "id": "R35",
+   "parent": {
+    "sys_id": "53958ff0c0a801640171ec76aa0c8f86",
+    "name": "lnux100"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R36",
+   "parent": {
+    "sys_id": "53979c53c0a801640116ad2044643fb2",
+    "name": "unix201"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R37",
+   "parent": {
+    "sys_id": "5f7dfd9cc0a8010e00ab58006f14bdc5",
+    "name": "dbaix900nyc"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R38",
+   "parent": {
+    "sys_id": "5f9b83bfc0a8010e005a2b3212c9dc07",
+    "name": "dbaix901nyc"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R39",
+   "parent": {
+    "sys_id": "5f9ba346c0a8010e00158183aaa1eb24",
+    "name": "dbaix902nyc"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R40",
+   "parent": {
+    "sys_id": "5fd00a81c0a8010e011635bd6a50fb64",
+    "name": "nyc rac nas200"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R41",
+   "parent": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R42",
+   "parent": {
+    "sys_id": "109481257f701200bee45f19befa91f5",
+    "name": "IP-Storage-Sw-1"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "why": "device mounted in rack NY-01-01 (PDI direction: device is parent)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R43",
+   "parent": {
+    "sys_id": "e79d9c220a0a0aa7000882470d2813ae",
+    "name": "NY-01-01"
+   },
+   "type": "Depends on::Used by",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child": {
+    "sys_id": "dfc365aabf2111007c94c0647e0739a2",
+    "name": "UPS New York"
+   },
+   "why": "rack is powered by the UPS",
+   "outage_carrying": true
+  },
+  {
+   "id": "R44",
+   "parent": {
+    "sys_id": "dfc365aabf2111007c94c0647e0739a2",
+    "name": "UPS New York"
+   },
+   "type": "Located in::Houses",
+   "type_sys_id": "e81e87c30a0a0aa7002dd03d09af0f6a",
+   "child": {
+    "sys_id": "e7a285070a0a0aa700520a59843ec88a",
+    "name": "NY Floor 1"
+   },
+   "why": "UPS stands in computer room NY Floor 1 (mirrors PDI zone->room direction)",
+   "outage_carrying": false
+  },
+  {
+   "id": "R45",
+   "parent": {
+    "sys_id": "63036c18c0a8010e01bac272daed2e2c",
+    "name": "Bond Trading - DR"
+   },
+   "type": "Depends on::Used by",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child": {
+    "local_key": "N_LNXLDN100",
+    "name": "lnxldn100"
+   },
+   "why": "DR service runs its web/app tier on the London host",
+   "outage_carrying": true
+  },
+  {
+   "id": "R46",
+   "parent": {
+    "sys_id": "63036c18c0a8010e01bac272daed2e2c",
+    "name": "Bond Trading - DR"
+   },
+   "type": "Depends on::Used by",
+   "type_sys_id": "1a9cb166f1571100a92eb60da2bce5c5",
+   "child": {
+    "sys_id": "aedc0e337f000001015b81bd61107aef",
+    "name": "bond_trade_ny_stby"
+   },
+   "why": "DR service uses the standby database",
+   "outage_carrying": true
+  },
+  {
+   "id": "R47",
+   "parent": {
+    "sys_id": "aedc0e337f000001015b81bd61107aef",
+    "name": "bond_trade_ny_stby"
+   },
+   "type": "Hosted on::Hosts",
+   "type_sys_id": "5f985e0ec0a8010e00a9714f2a172815",
+   "child": {
+    "local_key": "N_DBAIX950LDN",
+    "name": "dbaix950ldn"
+   },
+   "why": "standby database on the London AIX host (suggested pair)",
+   "outage_carrying": true
+  },
+  {
+   "id": "R48",
+   "parent": {
+    "sys_id": "aedc0e337f000001015b81bd61107aef",
+    "name": "bond_trade_ny_stby"
+   },
+   "type": "Receives data from::Sends data to",
+   "type_sys_id": "607b15e1c0a8010e00a4413059767eec",
+   "child": {
+    "sys_id": "55c3578bc0a8010e0117f727897d0011",
+    "name": "bond_trade_ny"
+   },
+   "why": "log shipping from production (data flow)",
+   "outage_carrying": false
+  },
+  {
+   "id": "R49",
+   "parent": {
+    "local_key": "N_LNXLDN100",
+    "name": "lnxldn100"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "2e7f5eda3720200044e0bfc8bcbe5d92",
+    "name": "London rack"
+   },
+   "why": "DR host in the London rack",
+   "outage_carrying": true
+  },
+  {
+   "id": "R50",
+   "parent": {
+    "local_key": "N_LNXLDN100",
+    "name": "lnxldn100"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "108a9205c611227500786e160f9d343e",
+    "name": "DataNoc.gw01.lanset.net"
+   },
+   "why": "DR host uplink to the London gateway",
+   "outage_carrying": true
+  },
+  {
+   "id": "R51",
+   "parent": {
+    "local_key": "N_DBAIX950LDN",
+    "name": "dbaix950ldn"
+   },
+   "type": "In Rack::Rack contains",
+   "type_sys_id": "e76b8c7b0a0a0aa70082c9f7c2f9dc64",
+   "child": {
+    "sys_id": "2e7f5eda3720200044e0bfc8bcbe5d92",
+    "name": "London rack"
+   },
+   "why": "DR host in the London rack",
+   "outage_carrying": true
+  },
+  {
+   "id": "R52",
+   "parent": {
+    "local_key": "N_DBAIX950LDN",
+    "name": "dbaix950ldn"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "108a9205c611227500786e160f9d343e",
+    "name": "DataNoc.gw01.lanset.net"
+   },
+   "why": "DR host uplink to the London gateway",
+   "outage_carrying": true
+  },
+  {
+   "id": "R53",
+   "parent": {
+    "sys_id": "b267bbdd7f301200bee45f19befa9172",
+    "name": "SAP-Win-App-Cluster"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "304481257f701200bee45f19befa915b",
+    "name": "IP-Switch-1"
+   },
+   "why": "replaces deleted 2eadd529: the SAP cluster is a bystander on the shared switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R54",
+   "parent": {
+    "sys_id": "e297bbdd7f301200bee45f19befa91eb",
+    "name": "SAP-SD-WIN-Cluster"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "109481257f701200bee45f19befa91f5",
+    "name": "IP-Storage-Sw-1"
+   },
+   "why": "replaces deleted 90ed1929: the SAP cluster is a bystander on the shared storage switch",
+   "outage_carrying": true
+  },
+  {
+   "id": "R55",
+   "parent": {
+    "sys_id": "3a172e820a0a0bb40034228e9f65f1be",
+    "name": "PS LoadBal01"
+   },
+   "type": "Connects to::Connected by",
+   "type_sys_id": "5599a965c0a8010e00da3b58b113d70e",
+   "child": {
+    "sys_id": "55b35562c0a8010e01cff22378e0aea9",
+    "name": "ny8500-nbxs08"
+   },
+   "why": "replaces deleted 3a372d7a: the PeopleSoft load balancer is a bystander on the switch",
+   "outage_carrying": true
+  }
+ ],
+ "alerts": [
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "bc00670554f1427340a4fee9c2264b8e"
+   },
+   "number": {
+    "value": "Alert0010101",
+    "display_value": "Alert0010101"
+   },
+   "source": {
+    "value": "SolarWinds",
+    "display_value": "SolarWinds"
+   },
+   "event_class": {
+    "value": "SolarWinds SRM on sw-orion01.nyc.acme-mock.example",
+    "display_value": "SolarWinds SRM on sw-orion01.nyc.acme-mock.example"
+   },
+   "node": {
+    "value": "nas200.nyc.acme-mock.example",
+    "display_value": "nas200.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Storage",
+    "display_value": "Storage"
+   },
+   "resource": {
+    "value": "NFS export /oradata",
+    "display_value": "NFS export /oradata"
+   },
+   "metric_name": {
+    "value": "Storage Array Status",
+    "display_value": "Storage Array Status"
+   },
+   "message_key": {
+    "value": "SolarWinds_nas200.nyc.acme-mock.example_Storage_NFS export /oradata_Storage Array Status",
+    "display_value": "SolarWinds_nas200.nyc.acme-mock.example_Storage_NFS export /oradata_Storage Array Status"
+   },
+   "severity": {
+    "value": "1",
+    "display_value": "Critical"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5fd00a81c0a8010e011635bd6a50fb64",
+    "display_value": "nyc rac nas200"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Storage array nyc rac nas200 not responding; NFS export /oradata unavailable (\"network path not found\").",
+    "display_value": "MOCK demo (synthetic): Storage array nyc rac nas200 not responding; NFS export /oradata unavailable (\"network path not found\")."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"array_status\": \"Down\", \"polling_engine\": \"sw-orion01\", \"model\": \"EMC CLARiiON CX4-240\", \"correlation_rule\": \"MOCK topology rule: storage CI -> dependent CIs (CMDB relationships, 15 min window)\"}",
+    "display_value": "{\"synthetic\": \"true\", \"array_status\": \"Down\", \"polling_engine\": \"sw-orion01\", \"model\": \"EMC CLARiiON CX4-240\", \"correlation_rule\": \"MOCK topology rule: storage CI -> dependent CIs (CMDB relationships, 15 min window)\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:41:12",
+    "display_value": "2026-09-14 22:41:12"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:12",
+    "display_value": "2026-09-14 22:55:12"
+   },
+   "event_count": {
+    "value": "15",
+    "display_value": "15"
+   },
+   "parent": {
+    "value": "",
+    "display_value": ""
+   },
+   "correlation_rule_group": {
+    "value": "1",
+    "display_value": "Primary"
+   },
+   "group_source": {
+    "value": "Rules-based",
+    "display_value": "Rules-based"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "ef4225a40a0a0b5700d0b8a790747812",
+    "display_value": "INC0000049"
+   },
+   "assignment_group": {
+    "value": "8a5055c9c61122780043563ef53438e3",
+    "display_value": "Hardware"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "0987b016f8d46d571ab960878bfa2af4",
+    "display_value": "0987b016f8d46d571ab960878bfa2af4"
+   },
+   "number": {
+    "value": "Alert0010102",
+    "display_value": "Alert0010102"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "dbaix900nyc.nyc.acme-mock.example",
+    "display_value": "dbaix900nyc.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Disk",
+    "display_value": "Disk"
+   },
+   "resource": {
+    "value": "/oradata",
+    "display_value": "/oradata"
+   },
+   "metric_name": {
+    "value": "builtin:host.disk.avail",
+    "display_value": "builtin:host.disk.avail"
+   },
+   "message_key": {
+    "value": "Dynatrace_dbaix900nyc.nyc.acme-mock.example_Disk_/oradata_builtin:host.disk.avail",
+    "display_value": "Dynatrace_dbaix900nyc.nyc.acme-mock.example_Disk_/oradata_builtin:host.disk.avail"
+   },
+   "severity": {
+    "value": "2",
+    "display_value": "Major"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5f7dfd9cc0a8010e00ab58006f14bdc5",
+    "display_value": "dbaix900nyc"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Disk unavailable: NFS mount /oradata on dbaix900nyc not responding.",
+    "display_value": "MOCK demo (synthetic): Disk unavailable: NFS mount /oradata on dbaix900nyc not responding."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"true\", \"entity_id\": \"HOST-9A1C00000000A900\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"true\", \"entity_id\": \"HOST-9A1C00000000A900\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:41:58",
+    "display_value": "2026-09-14 22:41:58"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:58",
+    "display_value": "2026-09-14 22:55:58"
+   },
+   "event_count": {
+    "value": "8",
+    "display_value": "8"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "8a5055c9c61122780043563ef53438e3",
+    "display_value": "Hardware"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "def25d9b155de51292d1f1aacfdb4406",
+    "display_value": "def25d9b155de51292d1f1aacfdb4406"
+   },
+   "number": {
+    "value": "Alert0010103",
+    "display_value": "Alert0010103"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "dbaix901nyc.nyc.acme-mock.example",
+    "display_value": "dbaix901nyc.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Disk",
+    "display_value": "Disk"
+   },
+   "resource": {
+    "value": "/oradata",
+    "display_value": "/oradata"
+   },
+   "metric_name": {
+    "value": "builtin:host.disk.avail",
+    "display_value": "builtin:host.disk.avail"
+   },
+   "message_key": {
+    "value": "Dynatrace_dbaix901nyc.nyc.acme-mock.example_Disk_/oradata_builtin:host.disk.avail",
+    "display_value": "Dynatrace_dbaix901nyc.nyc.acme-mock.example_Disk_/oradata_builtin:host.disk.avail"
+   },
+   "severity": {
+    "value": "2",
+    "display_value": "Major"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5f9b83bfc0a8010e005a2b3212c9dc07",
+    "display_value": "dbaix901nyc"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Disk unavailable: NFS mount /oradata on dbaix901nyc not responding.",
+    "display_value": "MOCK demo (synthetic): Disk unavailable: NFS mount /oradata on dbaix901nyc not responding."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"entity_id\": \"HOST-9A1C00000000A901\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"entity_id\": \"HOST-9A1C00000000A901\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:42:03",
+    "display_value": "2026-09-14 22:42:03"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:56:03",
+    "display_value": "2026-09-14 22:56:03"
+   },
+   "event_count": {
+    "value": "8",
+    "display_value": "8"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "8a5055c9c61122780043563ef53438e3",
+    "display_value": "Hardware"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "938ad9facae75244189c4d72ebeda9f6",
+    "display_value": "938ad9facae75244189c4d72ebeda9f6"
+   },
+   "number": {
+    "value": "Alert0010104",
+    "display_value": "Alert0010104"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "dbaix902nyc.nyc.acme-mock.example",
+    "display_value": "dbaix902nyc.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Disk",
+    "display_value": "Disk"
+   },
+   "resource": {
+    "value": "/oradata",
+    "display_value": "/oradata"
+   },
+   "metric_name": {
+    "value": "builtin:host.disk.avail",
+    "display_value": "builtin:host.disk.avail"
+   },
+   "message_key": {
+    "value": "Dynatrace_dbaix902nyc.nyc.acme-mock.example_Disk_/oradata_builtin:host.disk.avail",
+    "display_value": "Dynatrace_dbaix902nyc.nyc.acme-mock.example_Disk_/oradata_builtin:host.disk.avail"
+   },
+   "severity": {
+    "value": "2",
+    "display_value": "Major"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5f9ba346c0a8010e00158183aaa1eb24",
+    "display_value": "dbaix902nyc"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Disk unavailable: NFS mount /oradata on dbaix902nyc not responding.",
+    "display_value": "MOCK demo (synthetic): Disk unavailable: NFS mount /oradata on dbaix902nyc not responding."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"entity_id\": \"HOST-9A1C00000000A902\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"entity_id\": \"HOST-9A1C00000000A902\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:42:10",
+    "display_value": "2026-09-14 22:42:10"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:56:10",
+    "display_value": "2026-09-14 22:56:10"
+   },
+   "event_count": {
+    "value": "8",
+    "display_value": "8"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "8a5055c9c61122780043563ef53438e3",
+    "display_value": "Hardware"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "482f9bc17aa00e48e80770ba25027da6",
+    "display_value": "482f9bc17aa00e48e80770ba25027da6"
+   },
+   "number": {
+    "value": "Alert0010105",
+    "display_value": "Alert0010105"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "nycrac-clu.nyc.acme-mock.example",
+    "display_value": "nycrac-clu.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Cluster",
+    "display_value": "Cluster"
+   },
+   "resource": {
+    "value": "Oracle Clusterware",
+    "display_value": "Oracle Clusterware"
+   },
+   "metric_name": {
+    "value": "Voting disks online",
+    "display_value": "Voting disks online"
+   },
+   "message_key": {
+    "value": "Dynatrace_nycrac-clu.nyc.acme-mock.example_Cluster_Oracle Clusterware_Voting disks online",
+    "display_value": "Dynatrace_nycrac-clu.nyc.acme-mock.example_Cluster_Oracle Clusterware_Voting disks online"
+   },
+   "severity": {
+    "value": "1",
+    "display_value": "Critical"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5fd1aa38c0a8010e014f2ef246f3eba3",
+    "display_value": "nyc oracle rac cluster"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Oracle Clusterware lost access to its voting disks on /oradata; 0 of 3 nodes active.",
+    "display_value": "MOCK demo (synthetic): Oracle Clusterware lost access to its voting disks on /oradata; 0 of 3 nodes active."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"voting_disks_online\": \"0\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"voting_disks_online\": \"0\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:42:40",
+    "display_value": "2026-09-14 22:42:40"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:40",
+    "display_value": "2026-09-14 22:55:40"
+   },
+   "event_count": {
+    "value": "6",
+    "display_value": "6"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "5f74727dc0a8010e01efe33a251993f9",
+    "display_value": "NY DB"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "a933609e5c94cff7178a997bb5792040",
+    "display_value": "a933609e5c94cff7178a997bb5792040"
+   },
+   "number": {
+    "value": "Alert0010106",
+    "display_value": "Alert0010106"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "nyrac-scan.nyc.acme-mock.example",
+    "display_value": "nyrac-scan.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Database",
+    "display_value": "Database"
+   },
+   "resource": {
+    "value": "NY RAC",
+    "display_value": "NY RAC"
+   },
+   "metric_name": {
+    "value": "Database availability",
+    "display_value": "Database availability"
+   },
+   "message_key": {
+    "value": "Dynatrace_nyrac-scan.nyc.acme-mock.example_Database_NY RAC_Database availability",
+    "display_value": "Dynatrace_nyrac-scan.nyc.acme-mock.example_Database_NY RAC_Database availability"
+   },
+   "severity": {
+    "value": "1",
+    "display_value": "Critical"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5f97fe23c0a8010e01ef3cb03c20c7f5",
+    "display_value": "NY RAC"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Oracle RAC database NY RAC unavailable on all instances.",
+    "display_value": "MOCK demo (synthetic): Oracle RAC database NY RAC unavailable on all instances."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"instances_up\": \"0\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"instances_up\": \"0\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:43:05",
+    "display_value": "2026-09-14 22:43:05"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:05",
+    "display_value": "2026-09-14 22:55:05"
+   },
+   "event_count": {
+    "value": "5",
+    "display_value": "5"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "5f74727dc0a8010e01efe33a251993f9",
+    "display_value": "NY DB"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "99e3a8273355dc307396139758fcdfe8",
+    "display_value": "99e3a8273355dc307396139758fcdfe8"
+   },
+   "number": {
+    "value": "Alert0010107",
+    "display_value": "Alert0010107"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "nyrac-scan.nyc.acme-mock.example",
+    "display_value": "nyrac-scan.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Database",
+    "display_value": "Database"
+   },
+   "resource": {
+    "value": "bond_trade_ny",
+    "display_value": "bond_trade_ny"
+   },
+   "metric_name": {
+    "value": "Connection failures",
+    "display_value": "Connection failures"
+   },
+   "message_key": {
+    "value": "Dynatrace_nyrac-scan.nyc.acme-mock.example_Database_bond_trade_ny_Connection failures",
+    "display_value": "Dynatrace_nyrac-scan.nyc.acme-mock.example_Database_bond_trade_ny_Connection failures"
+   },
+   "severity": {
+    "value": "2",
+    "display_value": "Major"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "55c3578bc0a8010e0117f727897d0011",
+    "display_value": "bond_trade_ny"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Connections to bond_trade_ny failing (ORA-03113 end-of-file on communication channel).",
+    "display_value": "MOCK demo (synthetic): Connections to bond_trade_ny failing (ORA-03113 end-of-file on communication channel)."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"failed_connections_per_min\": \"412\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"failed_connections_per_min\": \"412\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:43:20",
+    "display_value": "2026-09-14 22:43:20"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:20",
+    "display_value": "2026-09-14 22:55:20"
+   },
+   "event_count": {
+    "value": "5",
+    "display_value": "5"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "5f74727dc0a8010e01efe33a251993f9",
+    "display_value": "NY DB"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "730b217bad5b2f9f5a4d8e744c3676b4",
+    "display_value": "730b217bad5b2f9f5a4d8e744c3676b4"
+   },
+   "number": {
+    "value": "Alert0010108",
+    "display_value": "Alert0010108"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "nyrac-scan.nyc.acme-mock.example",
+    "display_value": "nyrac-scan.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Database",
+    "display_value": "Database"
+   },
+   "resource": {
+    "value": "bond_trade_uk",
+    "display_value": "bond_trade_uk"
+   },
+   "metric_name": {
+    "value": "Connection failures",
+    "display_value": "Connection failures"
+   },
+   "message_key": {
+    "value": "Dynatrace_nyrac-scan.nyc.acme-mock.example_Database_bond_trade_uk_Connection failures",
+    "display_value": "Dynatrace_nyrac-scan.nyc.acme-mock.example_Database_bond_trade_uk_Connection failures"
+   },
+   "severity": {
+    "value": "2",
+    "display_value": "Major"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "55c38564c0a8010e00596302eb0d26bc",
+    "display_value": "bond_trade_uk"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Connections to bond_trade_uk failing (ORA-03113 end-of-file on communication channel).",
+    "display_value": "MOCK demo (synthetic): Connections to bond_trade_uk failing (ORA-03113 end-of-file on communication channel)."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"failed_connections_per_min\": \"97\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"failed_connections_per_min\": \"97\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:43:25",
+    "display_value": "2026-09-14 22:43:25"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:25",
+    "display_value": "2026-09-14 22:55:25"
+   },
+   "event_count": {
+    "value": "5",
+    "display_value": "5"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "5f74727dc0a8010e01efe33a251993f9",
+    "display_value": "NY DB"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "c6fdab26b26a8ea956f47cb3a445a5df",
+    "display_value": "c6fdab26b26a8ea956f47cb3a445a5df"
+   },
+   "number": {
+    "value": "Alert0010109",
+    "display_value": "Alert0010109"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "unix201.nyc.acme-mock.example",
+    "display_value": "unix201.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Application",
+    "display_value": "Application"
+   },
+   "resource": {
+    "value": "JVM bondtrading",
+    "display_value": "JVM bondtrading"
+   },
+   "metric_name": {
+    "value": "builtin:service.errors.server.rate",
+    "display_value": "builtin:service.errors.server.rate"
+   },
+   "message_key": {
+    "value": "Dynatrace_unix201.nyc.acme-mock.example_Application_JVM bondtrading_builtin:service.errors.server.rate",
+    "display_value": "Dynatrace_unix201.nyc.acme-mock.example_Application_JVM bondtrading_builtin:service.errors.server.rate"
+   },
+   "severity": {
+    "value": "2",
+    "display_value": "Major"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "82992eb60ad337024fbb6d06a866c636",
+    "display_value": "Java Application Server FLX"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Failure rate increase on Java Application Server FLX: 87% of requests fail (database unavailable).",
+    "display_value": "MOCK demo (synthetic): Failure rate increase on Java Application Server FLX: 87% of requests fail (database unavailable)."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"failure_rate_pct\": \"87\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"failure_rate_pct\": \"87\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:44:10",
+    "display_value": "2026-09-14 22:44:10"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:10",
+    "display_value": "2026-09-14 22:55:10"
+   },
+   "event_count": {
+    "value": "4",
+    "display_value": "4"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "5f6441efc0a8010e0177fcb589156352",
+    "display_value": "IT Securities"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "62b6b27b7df81f19e8ee4a85a4048d03",
+    "display_value": "62b6b27b7df81f19e8ee4a85a4048d03"
+   },
+   "number": {
+    "value": "Alert0010110",
+    "display_value": "Alert0010110"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "bondtrading.nyc.acme-mock.example",
+    "display_value": "bondtrading.nyc.acme-mock.example"
+   },
+   "type": {
+    "value": "Web",
+    "display_value": "Web"
+   },
+   "resource": {
+    "value": "httpd :443",
+    "display_value": "httpd :443"
+   },
+   "metric_name": {
+    "value": "builtin:service.errors.server.rate",
+    "display_value": "builtin:service.errors.server.rate"
+   },
+   "message_key": {
+    "value": "Dynatrace_bondtrading.nyc.acme-mock.example_Web_httpd :443_builtin:service.errors.server.rate",
+    "display_value": "Dynatrace_bondtrading.nyc.acme-mock.example_Web_httpd :443_builtin:service.errors.server.rate"
+   },
+   "severity": {
+    "value": "3",
+    "display_value": "Minor"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "5397fa53c0a8016400f562cb29027855",
+    "display_value": "apache linux ny 100"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): HTTP 5xx rate on bondtrading.nyc front end at 64% (backend errors).",
+    "display_value": "MOCK demo (synthetic): HTTP 5xx rate on bondtrading.nyc front end at 64% (backend errors)."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"http_5xx_pct\": \"64\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1042\", \"isRootCause\": \"false\", \"http_5xx_pct\": \"64\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:45:30",
+    "display_value": "2026-09-14 22:45:30"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:55:30",
+    "display_value": "2026-09-14 22:55:30"
+   },
+   "event_count": {
+    "value": "3",
+    "display_value": "3"
+   },
+   "parent": {
+    "value": "bc00670554f1427340a4fee9c2264b8e",
+    "display_value": "Alert0010101"
+   },
+   "correlation_rule_group": {
+    "value": "2",
+    "display_value": "Secondary"
+   },
+   "group_source": {
+    "value": "Secondary",
+    "display_value": "Secondary"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "5f6441efc0a8010e0177fcb589156352",
+    "display_value": "IT Securities"
+   }
+  },
+  {
+   "synthetic": {
+    "value": "true",
+    "display_value": "true"
+   },
+   "sys_id": {
+    "value": "39e41ef6791c4ca8ffdb291231b501e4",
+    "display_value": "39e41ef6791c4ca8ffdb291231b501e4"
+   },
+   "number": {
+    "value": "Alert0010111",
+    "display_value": "Alert0010111"
+   },
+   "source": {
+    "value": "Dynatrace",
+    "display_value": "Dynatrace"
+   },
+   "event_class": {
+    "value": "Dynatrace SaaS tenant mock01",
+    "display_value": "Dynatrace SaaS tenant mock01"
+   },
+   "node": {
+    "value": "dbaix950ldn.ldn.acme-mock.example",
+    "display_value": "dbaix950ldn.ldn.acme-mock.example"
+   },
+   "type": {
+    "value": "Database",
+    "display_value": "Database"
+   },
+   "resource": {
+    "value": "bond_trade_ny_stby",
+    "display_value": "bond_trade_ny_stby"
+   },
+   "metric_name": {
+    "value": "Redo apply lag",
+    "display_value": "Redo apply lag"
+   },
+   "message_key": {
+    "value": "Dynatrace_dbaix950ldn.ldn.acme-mock.example_Database_bond_trade_ny_stby_Redo apply lag",
+    "display_value": "Dynatrace_dbaix950ldn.ldn.acme-mock.example_Database_bond_trade_ny_stby_Redo apply lag"
+   },
+   "severity": {
+    "value": "4",
+    "display_value": "Warning"
+   },
+   "state": {
+    "value": "Open",
+    "display_value": "Open"
+   },
+   "acknowledged": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "maintenance": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "cmdb_ci": {
+    "value": "aedc0e337f000001015b81bd61107aef",
+    "display_value": "bond_trade_ny_stby"
+   },
+   "description": {
+    "value": "MOCK demo (synthetic): Standby bond_trade_ny_stby (London) receives no redo from bond_trade_ny; apply lag 15 min. DR copy itself is healthy.",
+    "display_value": "MOCK demo (synthetic): Standby bond_trade_ny_stby (London) receives no redo from bond_trade_ny; apply lag 15 min. DR copy itself is healthy."
+   },
+   "additional_info": {
+    "value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1043\", \"isRootCause\": \"false\", \"apply_lag_min\": \"15\"}",
+    "display_value": "{\"synthetic\": \"true\", \"problem_id\": \"P-260914-1043\", \"isRootCause\": \"false\", \"apply_lag_min\": \"15\"}"
+   },
+   "initial_remote_time": {
+    "value": "2026-09-14 21:56:00",
+    "display_value": "2026-09-14 22:56:00"
+   },
+   "last_remote_time": {
+    "value": "2026-09-14 21:56:00",
+    "display_value": "2026-09-14 22:56:00"
+   },
+   "event_count": {
+    "value": "1",
+    "display_value": "1"
+   },
+   "parent": {
+    "value": "",
+    "display_value": ""
+   },
+   "correlation_rule_group": {
+    "value": "0",
+    "display_value": "None"
+   },
+   "group_source": {
+    "value": "None",
+    "display_value": "None"
+   },
+   "is_group_alert": {
+    "value": "false",
+    "display_value": "false"
+   },
+   "incident": {
+    "value": "",
+    "display_value": ""
+   },
+   "assignment_group": {
+    "value": "287ee6fea9fe198100ada7950d0b1b73",
+    "display_value": "Database"
+   }
+  }
+ ],
+ "coverage": {
+  "classes": {
+   "cmdb_ci_service": {
+    "covered": true,
+    "below_business_app": [
+     "Bond Trading (hop 1, reached via R01)",
+     "Bond Trading - DR (hop 1, reached via R02)"
+    ],
+    "upstream_neighbours": [
+     "IT Services -Depends on::Used by-> Bond Trading (281abbc2)",
+     "Retail Adding Points -Depends on::Used by-> dbaix901nyc (28c91345)",
+     "SAP Payroll -Depends on::Used by-> bond_trade_aus (32f1c882)",
+     "PeopleSoft Asset Lifecycle Management -Depends on::Used by-> ny8500-nbxs08 (3a32b211)",
+     "PeopleSoft CRM -Depends on::Used by-> ny8500-nbxs08 (3a32b21c)",
+     "PeopleSoft Financials -Depends on::Used by-> ny8500-nbxs08 (3a32b222)"
+    ],
+    "how": "Bond Trading, Bond Trading - DR (both consumed by the business app); IT Services and others sit upstream."
+   },
+   "cmdb_ci_service_group": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "Trading Services -Contains::Contained by-> Bond Trading (R03)"
+    ],
+    "how": "Trading Services (new service group; the PDI locks the group All) -Contains-> Bond Trading / Bond Trading - DR (new rows)."
+   },
+   "cmdb_ci_appl": {
+    "covered": true,
+    "below_business_app": [
+     "CMS App FLX (hop 2, reached via R05)"
+    ],
+    "upstream_neighbours": [],
+    "how": "CMS App FLX: Bond Trading -Depends on-> it (new), Runs on unix201 (new)."
+   },
+   "cmdb_ci_app_server_java": {
+    "covered": true,
+    "below_business_app": [
+     "Java Application Server FLX (hop 3, reached via R08)"
+    ],
+    "upstream_neighbours": [],
+    "how": "Java Application Server FLX: web tier flows to it, runs on unix201, depends on bond_trade_ny (new)."
+   },
+   "cmdb_ci_web_server": {
+    "covered": true,
+    "below_business_app": [
+     "apache linux ny 100 (hop 2, reached via 5399a378)"
+    ],
+    "upstream_neighbours": [
+     "apache linux den 200 -Runs on::Runs-> lnux100 (60bcdceb)"
+    ],
+    "how": "apache linux ny 100 (existing), now Runs on lnux100."
+   },
+   "cmdb_ci_email_server": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "EXCHANGE-NY-02 -Receives data from::Sends data to-> Java Application Server FLX (R13)"
+    ],
+    "how": "EXCHANGE-NY-02 receives trade confirmations from the Java app server (data flow, not outage-carrying)."
+   },
+   "cmdb_ci_database": {
+    "covered": true,
+    "below_business_app": [
+     "bond_trade_ny (hop 2, reached via 55c3c210)",
+     "bond_trade_uk (hop 2, reached via 55c3c238)",
+     "bond_trade_ny_stby (hop 2, reached via R46)",
+     "NY RAC (hop 3, reached via 5f98aeae)",
+     "bond_trade_aus (hop 3, reached via R14)"
+    ],
+    "upstream_neighbours": [],
+    "how": "bond_trade_ny / bond_trade_uk / NY RAC (prod), bond_trade_aus (feed), bond_trade_ny_stby (DR standby, renamed from Oracle 11i)."
+   },
+   "cmdb_ci_db_ora_catalog": {
+    "covered": true,
+    "below_business_app": [
+     "Oracle FLX (hop 4, reached via 82c1e78b)"
+    ],
+    "upstream_neighbours": [],
+    "how": "Oracle FLX, existing Java AS dependency, now Hosted on NY RAC."
+   },
+   "cmdb_ci_db_mysql_catalog": {
+    "covered": true,
+    "below_business_app": [
+     "MySQL FLX (hop 4, reached via 82c1e77e)"
+    ],
+    "upstream_neighbours": [],
+    "how": "MySQL FLX, existing Java AS dependency, now Hosted on DatabaseServer1."
+   },
+   "cmdb_ci_server": {
+    "covered": true,
+    "below_business_app": [
+     "DatabaseServer1 (hop 5, reached via R12)"
+    ],
+    "upstream_neighbours": [
+     "Webserver FLX -Depends on::Used by-> Java Application Server FLX (82c2ba79)",
+     "DatabaseServer2 -In Rack::Rack contains-> NY-01-01 (e7b54b64)"
+    ],
+    "how": "DatabaseServer1 (hosts MySQL FLX, in rack NY-01-01). Webserver FLX is an upstream consumer of the Java app server."
+   },
+   "cmdb_ci_win_server": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "PS LoadBal01 -Connects to::Connected by-> ny8500-nbxs08 (R55)"
+    ],
+    "how": "PS LoadBal01: bystander on Bond Trading's user-access switch (PS LoadBal01 -Connects to-> ny8500-nbxs08, reversed from the PDI row)."
+   },
+   "cmdb_ci_linux_server": {
+    "covered": true,
+    "below_business_app": [
+     "lnux100 (hop 2, reached via 5399a396)",
+     "lnxldn100 (hop 2, reached via R45)"
+    ],
+    "upstream_neighbours": [],
+    "how": "lnux100 (prod web host), lnxldn100 (NEW, DR)."
+   },
+   "cmdb_ci_unix_server": {
+    "covered": true,
+    "below_business_app": [
+     "unix201 (hop 2, reached via 5399a3be)",
+     "dbaix900nyc (hop 5, reached via 5fd31fa5)",
+     "dbaix901nyc (hop 5, reached via 5fd31fb9)",
+     "dbaix902nyc (hop 5, reached via 5fd31fc3)"
+    ],
+    "upstream_neighbours": [],
+    "how": "unix201 (app host), dbaix900/901/902nyc (RAC nodes; class unix_server, os AIX)."
+   },
+   "cmdb_ci_aix_server": {
+    "covered": true,
+    "below_business_app": [
+     "dbaix950ldn (hop 3, reached via R47)"
+    ],
+    "upstream_neighbours": [],
+    "how": "dbaix950ldn (NEW, DR database host): the PDI's two AIX servers are SAP-dedicated in San Diego."
+   },
+   "cmdb_ci_cluster": {
+    "covered": true,
+    "below_business_app": [
+     "nyc oracle rac cluster (hop 4, reached via 5fd6a9b7)"
+    ],
+    "upstream_neighbours": [],
+    "how": "nyc oracle rac cluster (existing)."
+   },
+   "cmdb_ci_cluster_node": {
+    "covered": true,
+    "below_business_app": [
+     "Node 1 (hop 5, reached via R16)",
+     "Node 2 (hop 5, reached via R18)",
+     "Node 3 (hop 5, reached via R20)"
+    ],
+    "upstream_neighbours": [],
+    "how": "Node 1-3: Members of the cluster and Hosted on dbaix900-902nyc (new rows; reference fields already said so)."
+   },
+   "cmdb_ci_win_cluster": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "SAP-Win-App-Cluster -Connects to::Connected by-> IP-Switch-1 (R53)",
+     "SAP-SD-WIN-Cluster -Connects to::Connected by-> IP-Storage-Sw-1 (R54)"
+    ],
+    "how": "SAP-Win-App-Cluster -Connects to-> IP-Switch-1, SAP-SD-WIN-Cluster -Connects to-> IP-Storage-Sw-1 (reversed from the PDI rows): bystanders on the shared switches. A switch fault reaches them; their failures do not reach Bond Trading."
+   },
+   "cmdb_ci_win_cluster_node": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "Sap1 -Members::Member of (of a bystander cluster)-> SAP-Win-App-Cluster (3144a7ad)",
+     "Sap2 -Members::Member of (of a bystander cluster)-> SAP-Win-App-Cluster (3764a7ad)",
+     "Storage-D3 -Members::Member of (of a bystander cluster)-> SAP-SD-WIN-Cluster (6dc4e7ad)",
+     "Storage-D1 -Members::Member of (of a bystander cluster)-> SAP-SD-WIN-Cluster (70a4e7ad)",
+     "Sap3 -Members::Member of (of a bystander cluster)-> SAP-Win-App-Cluster (8384e7ad)",
+     "Storage-D4 -Members::Member of (of a bystander cluster)-> SAP-SD-WIN-Cluster (94d4e7ad)"
+    ],
+    "how": "Sap1-4 / Storage-D1-4: existing Members of the two bystander SAP clusters."
+   },
+   "cmdb_ci_msd": {
+    "covered": true,
+    "below_business_app": [
+     "nyc rac nas200 (hop 6, reached via 60089bdf)"
+    ],
+    "upstream_neighbours": [],
+    "how": "nyc rac nas200: outage origin (INC0000049)."
+   },
+   "cmdb_ci_storage_switch": {
+    "covered": true,
+    "below_business_app": [
+     "IP-Storage-Sw-1 (hop 6, reached via R30)"
+    ],
+    "upstream_neighbours": [],
+    "how": "IP-Storage-Sw-1: RAC nodes connect to it, nas200 is Connected by it (new)."
+   },
+   "cmdb_ci_disk": {
+    "covered": true,
+    "below_business_app": [
+     "local hd (hop 6, reached via R22)"
+    ],
+    "upstream_neighbours": [],
+    "how": "local hd of dbaix901nyc (computer field already set; new Contains row)."
+   },
+   "cmdb_ci_netgear": {
+    "covered": true,
+    "below_business_app": [
+     "ny8500-nbxs08 (hop 2, reached via 55b3b2f5)",
+     "DataNoc.gw01.lanset.net (hop 3, reached via R50)",
+     "ny8500-nbxs09 (hop 4, reached via R34)"
+    ],
+    "upstream_neighbours": [],
+    "how": "ny8500-nbxs09 (NY site gateway, new uplink), ny8500-nbxs08 (existing user-access switch), DataNoc.gw01.lanset.net (London DR gateway)."
+   },
+   "cmdb_ci_ip_router": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "IP-Router-3 -Depends on::Used by-> IP-Switch-1 (2e2cd129)"
+    ],
+    "how": "IP-Router-1..3: existing chain IP-Router-1 -> 2 -> 3 -Depends on-> IP-Switch-1 (routers sit upstream of the switch in the graph: an IP-Switch-1 fault reaches them, not the reverse; inherited, left as-is)."
+   },
+   "cmdb_ci_ip_switch": {
+    "covered": true,
+    "below_business_app": [
+     "IP-Switch-1 (hop 3, reached via R24)"
+    ],
+    "upstream_neighbours": [],
+    "how": "IP-Switch-1: top-of-rack switch of all NY hosts (new Connects to rows)."
+   },
+   "cmdb_ci_network_adapter": {
+    "covered": true,
+    "below_business_app": [
+     "eth0 (hop 3, reached via R23)"
+    ],
+    "upstream_neighbours": [],
+    "how": "eth0 re-pointed from a laptop to lnux100 (logged) + lnux100 -Contains-> eth0."
+   },
+   "cmdb_ci_datacenter": {
+    "covered": true,
+    "below_business_app": [],
+    "upstream_neighbours": [
+     "New York -Located In::Contains Room-> NY Floor 1 (e8273c87)"
+    ],
+    "how": "New York via existing chain rack -> zone -> room <- datacenter."
+   },
+   "cmdb_ci_computer_room": {
+    "covered": true,
+    "below_business_app": [
+     "NY Floor 1 (hop 5, reached via e8219c94)"
+    ],
+    "upstream_neighbours": [],
+    "how": "NY Floor 1 (existing chain; also houses UPS New York, new)."
+   },
+   "cmdb_ci_rack": {
+    "covered": true,
+    "below_business_app": [
+     "NY-01-01 (hop 3, reached via R35)",
+     "42U 3100 SP2 NetShelter Rack (hop 3, reached via R49)"
+    ],
+    "upstream_neighbours": [],
+    "how": "NY-01-01 (prod, 8 devices In Rack, new) and the London NetShelter rack (DR hosts, new)."
+   },
+   "cmdb_ci_zone": {
+    "covered": true,
+    "below_business_app": [
+     "NY1A (hop 4, reached via e8126009)"
+    ],
+    "upstream_neighbours": [
+     "NY1B -Located in::Houses-> NY Floor 1 (e8219cbc)"
+    ],
+    "how": "NY1A via existing NY-01-01 -Located in Zone-> NY1A."
+   },
+   "cmdb_ci_ups": {
+    "covered": true,
+    "below_business_app": [
+     "UPS New York (hop 4, reached via R43)"
+    ],
+    "upstream_neighbours": [],
+    "how": "UPS New York: NY-01-01 -Depends on-> it, it is Located in NY Floor 1 (new)."
+   }
+  },
+  "relationship_types": {
+   "Depends on::Used by": {
+    "covered": true,
+    "new": [
+     "R05: Bond Trading -> CMS App FLX",
+     "R10: Java Application Server FLX -> bond_trade_ny",
+     "R43: NY-01-01 -> UPS New York",
+     "R45: Bond Trading - DR -> lnxldn100",
+     "R46: Bond Trading - DR -> bond_trade_ny_stby"
+    ],
+    "existing_in_slice": [
+     "IT Services -> Bond Trading (281abbc2)",
+     "Retail Adding Points -> dbaix901nyc (28c91345)",
+     "IP-Router-3 -> IP-Switch-1 (2e2cd129)",
+     "SAP Payroll -> bond_trade_aus (32f1c882)",
+     "PeopleSoft Asset Lifecycle Management -> ny8500-nbxs08 (3a32b211)",
+     "PeopleSoft CRM -> ny8500-nbxs08 (3a32b21c)"
+    ],
+    "existing_in_slice_count": 28
+   },
+   "Exchanges data with::Exchanges data with": {
+    "covered": true,
+    "new": [
+     "R15: bond_trade_ny -> bond_trade_uk"
+    ],
+    "existing_in_slice": [],
+    "existing_in_slice_count": 0
+   },
+   "Members::Member of": {
+    "covered": true,
+    "new": [
+     "R16: nyc oracle rac cluster -> Node 1",
+     "R18: nyc oracle rac cluster -> Node 2",
+     "R20: nyc oracle rac cluster -> Node 3"
+    ],
+    "existing_in_slice": [
+     "nyc oracle rac cluster -> dbaix900nyc (5fd31fa5)",
+     "nyc oracle rac cluster -> dbaix901nyc (5fd31fb9)",
+     "nyc oracle rac cluster -> dbaix902nyc (5fd31fc3)"
+    ],
+    "existing_in_slice_count": 3
+   },
+   "Contains::Contained by": {
+    "covered": true,
+    "new": [
+     "R03: Trading Services -> Bond Trading",
+     "R04: Trading Services -> Bond Trading - DR",
+     "R22: dbaix901nyc -> local hd (dbaix901nyc)",
+     "R23: lnux100 -> eth0"
+    ],
+    "existing_in_slice": [],
+    "existing_in_slice_count": 0
+   },
+   "Connects to::Connected by": {
+    "covered": true,
+    "new": [
+     "R24: lnux100 -> IP-Switch-1",
+     "R25: unix201 -> IP-Switch-1",
+     "R26: dbaix900nyc -> IP-Switch-1",
+     "R27: dbaix901nyc -> IP-Switch-1",
+     "R28: dbaix902nyc -> IP-Switch-1",
+     "R29: DatabaseServer1 -> IP-Switch-1",
+     "R30: dbaix900nyc -> IP-Storage-Sw-1",
+     "R31: dbaix901nyc -> IP-Storage-Sw-1",
+     "R32: dbaix902nyc -> IP-Storage-Sw-1",
+     "R34: IP-Switch-1 -> ny8500-nbxs09",
+     "R50: lnxldn100 -> DataNoc.gw01.lanset.net",
+     "R52: dbaix950ldn -> DataNoc.gw01.lanset.net",
+     "R53: SAP-Win-App-Cluster -> IP-Switch-1",
+     "R54: SAP-SD-WIN-Cluster -> IP-Storage-Sw-1",
+     "R55: PS LoadBal01 -> ny8500-nbxs08"
+    ],
+    "existing_in_slice": [
+     "Bond Trading -> ny8500-nbxs08 (55b3b2f5)",
+     "Securities Lending -> ny8500-nbxs08 (63a18250)"
+    ],
+    "existing_in_slice_count": 2
+   },
+   "Runs on::Runs": {
+    "covered": true,
+    "new": [
+     "R06: CMS App FLX -> unix201",
+     "R07: apache linux ny 100 -> lnux100",
+     "R09: Java Application Server FLX -> unix201"
+    ],
+    "existing_in_slice": [
+     "apache linux den 200 -> lnux100 (60bcdceb)",
+     "Securities Lending -> unix201 (63a50a59)"
+    ],
+    "existing_in_slice_count": 2
+   },
+   "Receives data from::Sends data to": {
+    "covered": true,
+    "new": [
+     "R13: EXCHANGE-NY-02 -> Java Application Server FLX",
+     "R14: bond_trade_ny -> bond_trade_aus",
+     "R48: bond_trade_ny_stby -> bond_trade_ny"
+    ],
+    "existing_in_slice": [],
+    "existing_in_slice_count": 0
+   },
+   "Located in::Houses": {
+    "covered": true,
+    "new": [
+     "R44: UPS New York -> NY Floor 1"
+    ],
+    "existing_in_slice": [
+     "NY1A -> NY Floor 1 (e8219c94)",
+     "NY1B -> NY Floor 1 (e8219cbc)"
+    ],
+    "existing_in_slice_count": 2
+   },
+   "Applicative Flow To::Applicative Flow From": {
+    "covered": true,
+    "new": [
+     "R08: apache linux ny 100 -> Java Application Server FLX"
+    ],
+    "existing_in_slice": [],
+    "existing_in_slice_count": 0
+   },
+   "Hosted on::Hosts": {
+    "covered": true,
+    "new": [
+     "R11: Oracle FLX -> NY RAC",
+     "R12: MySQL FLX -> DatabaseServer1",
+     "R17: Node 1 -> dbaix900nyc",
+     "R19: Node 2 -> dbaix901nyc",
+     "R21: Node 3 -> dbaix902nyc",
+     "R47: bond_trade_ny_stby -> dbaix950ldn"
+    ],
+    "existing_in_slice": [
+     "bond_trade_ny -> NY RAC (5f98aeae)",
+     "bond_trade_uk -> NY RAC (5f99917d)"
+    ],
+    "existing_in_slice_count": 2
+   },
+   "In Rack::Rack contains": {
+    "covered": true,
+    "new": [
+     "R35: lnux100 -> NY-01-01",
+     "R36: unix201 -> NY-01-01",
+     "R37: dbaix900nyc -> NY-01-01",
+     "R38: dbaix901nyc -> NY-01-01",
+     "R39: dbaix902nyc -> NY-01-01",
+     "R40: nyc rac nas200 -> NY-01-01",
+     "R41: IP-Switch-1 -> NY-01-01",
+     "R42: IP-Storage-Sw-1 -> NY-01-01",
+     "R49: lnxldn100 -> London rack",
+     "R51: dbaix950ldn -> London rack"
+    ],
+    "existing_in_slice": [
+     "DatabaseServer1 -> NY-01-01 (e7b54b09)",
+     "DatabaseServer2 -> NY-01-01 (e7b54b64)"
+    ],
+    "existing_in_slice_count": 2
+   },
+   "Located In::Contains Room": {
+    "covered": true,
+    "new": [],
+    "existing_in_slice": [
+     "New York -> NY Floor 1 (e8273c87)"
+    ],
+    "existing_in_slice_count": 1
+   },
+   "DR provided by::Provides DR for": {
+    "covered": true,
+    "new": [],
+    "existing_in_slice": [
+     "Bond Trading -> Bond Trading - DR (63040806)"
+    ],
+    "existing_in_slice_count": 1
+   },
+   "Located in Zone::Zone contains": {
+    "covered": true,
+    "new": [],
+    "existing_in_slice": [
+     "NY-01-01 -> NY1A (e8126009)"
+    ],
+    "existing_in_slice_count": 1
+   },
+   "Connected by::Connects": {
+    "covered": true,
+    "new": [
+     "R33: nyc rac nas200 -> IP-Storage-Sw-1"
+    ],
+    "existing_in_slice": [
+     "bond_trade_aus -> CALLXPR1 (f5efff71)"
+    ],
+    "existing_in_slice_count": 1
+   },
+   "Consumes::Consumed by": {
+    "covered": true,
+    "new": [
+     "R01: Bond Trading (business app) -> Bond Trading",
+     "R02: Bond Trading (business app) -> Bond Trading - DR"
+    ],
+    "existing_in_slice": [],
+    "existing_in_slice_count": 0
+   }
+  }
+ },
+ "outage_walks": {
+  "impact_from_nas200": [
+   "Bond Trading [cmdb_ci_service]",
+   "Bond Trading [cmdb_ci_business_app]",
+   "CMS App FLX [cmdb_ci_appl]",
+   "IT Services [cmdb_ci_service]",
+   "Java Application Server FLX [cmdb_ci_app_server_java]",
+   "NY RAC [cmdb_ci_database]",
+   "Node 1 [cmdb_ci_cluster_node]",
+   "Node 2 [cmdb_ci_cluster_node]",
+   "Node 3 [cmdb_ci_cluster_node]",
+   "Oracle FLX [cmdb_ci_db_ora_catalog]",
+   "Retail [cmdb_ci_service]",
+   "Retail Adding Points [cmdb_ci_service]",
+   "Retail POS (Point of Sale) [cmdb_ci_service]",
+   "Webserver FLX [cmdb_ci_server]",
+   "Workstation FLX [cmdb_ci_computer]",
+   "bond_trade_ny [cmdb_ci_database]",
+   "bond_trade_uk [cmdb_ci_database]",
+   "dbaix900nyc [cmdb_ci_unix_server]",
+   "dbaix901nyc [cmdb_ci_unix_server]",
+   "dbaix902nyc [cmdb_ci_unix_server]",
+   "nyc oracle rac cluster [cmdb_ci_cluster]"
+  ],
+  "failure_reaches_business_app": [
+   "hop 1: Bond Trading [cmdb_ci_service]",
+   "hop 1: Bond Trading - DR [cmdb_ci_service]",
+   "hop 2: CMS App FLX [cmdb_ci_appl]",
+   "hop 2: apache linux ny 100 [cmdb_ci_web_server]",
+   "hop 2: bond_trade_ny [cmdb_ci_database]",
+   "hop 2: bond_trade_ny_stby [cmdb_ci_database]",
+   "hop 2: bond_trade_uk [cmdb_ci_database]",
+   "hop 2: lnux100 [cmdb_ci_linux_server]",
+   "hop 2: lnxldn100 [cmdb_ci_linux_server]",
+   "hop 2: ny8500-nbxs08 [cmdb_ci_netgear]",
+   "hop 2: unix201 [cmdb_ci_unix_server]",
+   "hop 3: 42U 3100 SP2 NetShelter Rack [cmdb_ci_rack]",
+   "hop 3: DataNoc.gw01.lanset.net [cmdb_ci_netgear]",
+   "hop 3: IP-Switch-1 [cmdb_ci_ip_switch]",
+   "hop 3: Java Application Server FLX [cmdb_ci_app_server_java]",
+   "hop 3: NY RAC [cmdb_ci_database]",
+   "hop 3: NY-01-01 [cmdb_ci_rack]",
+   "hop 3: dbaix950ldn [cmdb_ci_aix_server]",
+   "hop 3: eth0 [cmdb_ci_network_adapter]",
+   "hop 4: MySQL FLX [cmdb_ci_db_mysql_catalog]",
+   "hop 4: Oracle FLX [cmdb_ci_db_ora_catalog]",
+   "hop 4: UPS New York [cmdb_ci_ups]",
+   "hop 4: ny8500-nbxs09 [cmdb_ci_netgear]",
+   "hop 4: nyc oracle rac cluster [cmdb_ci_cluster]",
+   "hop 5: DatabaseServer1 [cmdb_ci_server]",
+   "hop 5: Node 1 [cmdb_ci_cluster_node]",
+   "hop 5: Node 2 [cmdb_ci_cluster_node]",
+   "hop 5: Node 3 [cmdb_ci_cluster_node]",
+   "hop 5: dbaix900nyc [cmdb_ci_unix_server]",
+   "hop 5: dbaix901nyc [cmdb_ci_unix_server]",
+   "hop 5: dbaix902nyc [cmdb_ci_unix_server]",
+   "hop 6: IP-Storage-Sw-1 [cmdb_ci_storage_switch]",
+   "hop 6: local hd [cmdb_ci_disk]",
+   "hop 6: nyc rac nas200 [cmdb_ci_msd]"
+  ]
+ },
+ "counts": {
+  "business_app": 1,
+  "new_cis": 3,
+  "updated_records": 39,
+  "updated_fields": 153,
+  "overwrites": 20,
+  "deleted_relationships": 4,
+  "new_relationships": 55,
+  "alerts": 11,
+  "classes_covered": 30,
+  "rel_types_covered": 16,
+  "cis_below_business_app": 38,
+  "cis_whose_failure_reaches_business_app": 34,
+  "cis_impacted_by_nas200": 22
+ }
+}

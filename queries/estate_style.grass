@@ -1,0 +1,205 @@
+node {
+  color: #DDDDDD;
+  size: 28px;
+  caption: "{name}";
+}
+node.Alert {
+  color: #F28482;
+  size: 20px;
+  caption: "{name}";
+}
+node.Incident {
+  color: #F28482;
+  size: 20px;
+  caption: "{name}";
+}
+node.Location {
+  color: #F1F1F1;
+  size: 20px;
+  caption: "{name}";
+}
+node.Person {
+  color: #B8B08D;
+  size: 20px;
+  caption: "{name}";
+}
+node.Group {
+  color: #66A182;
+  size: 22px;
+  caption: "{name}";
+}
+node.BusinessApplication {
+  color: #8E1B2C;
+  size: 45px;
+  caption: "{name}";
+}
+node.ApplicationServiceGroup {
+  color: #D1495B;
+  size: 38px;
+  caption: "{name}";
+}
+node.Service {
+  color: #D1495B;
+  size: 38px;
+  caption: "{name}";
+}
+node.OracleCatalog {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.MySQLCatalog {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.DatabaseCatalog {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.Database {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.InfrastructureService {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.EmailServer {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.WebServer {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.JavaServer {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.ApplicationServer {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.Application {
+  color: #EDAE49;
+  size: 32px;
+  caption: "{name}";
+}
+node.WindowsClusterNode {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.ClusterNode {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.WindowsCluster {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.Cluster {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.WindowsServer {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.AIXServer {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.UNIXServer {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.LinuxServer {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.Server {
+  color: #00798C;
+  size: 28px;
+  caption: "{name}";
+}
+node.NetworkAdapter {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.IPRouter {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.IPSwitch {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.NetworkGear {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.StorageSwitch {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.Disk {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.StorageDevice {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.MassStorageDevice {
+  color: #6A4C93;
+  size: 25px;
+  caption: "{name}";
+}
+node.UPS {
+  color: #8D99AE;
+  size: 22px;
+  caption: "{name}";
+}
+node.Rack {
+  color: #8D99AE;
+  size: 22px;
+  caption: "{name}";
+}
+node.ComputerRoom {
+  color: #8D99AE;
+  size: 22px;
+  caption: "{name}";
+}
+node.DataCenterZone {
+  color: #8D99AE;
+  size: 22px;
+  caption: "{name}";
+}
+node.DataCenter {
+  color: #8D99AE;
+  size: 22px;
+  caption: "{name}";
+}
