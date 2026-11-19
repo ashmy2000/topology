@@ -1,0 +1,40 @@
+{
+  "name": "vesperloom-v1",
+  "namespace": "f35e3bc8-c843-4c94-b4d5-79ac6982af86",
+  "nodes": {
+    "array": {"labels": ["CI", "StorageArray"], "properties": {"name": "Vesperloom Primary Array", "sys_class_name": "synthetic_storage_array"}},
+    "db-a": {"labels": ["CI", "Server"], "properties": {"name": "Vesperloom Database A", "sys_class_name": "synthetic_database_server"}},
+    "db-b": {"labels": ["CI", "Server"], "properties": {"name": "Vesperloom Database B", "sys_class_name": "synthetic_database_server"}},
+    "db-c": {"labels": ["CI", "Server"], "properties": {"name": "Vesperloom Database C", "sys_class_name": "synthetic_database_server"}},
+    "cluster": {"labels": ["CI", "Cluster"], "properties": {"name": "Vesperloom Database Cluster", "sys_class_name": "synthetic_cluster"}},
+    "primary": {"labels": ["CI", "Service"], "properties": {"name": "Lantern Ledger Primary Service", "sys_class_name": "synthetic_service"}},
+    "recovery": {"labels": ["CI", "Service"], "properties": {"name": "Lantern Ledger Recovery Service", "sys_class_name": "synthetic_service"}},
+    "app": {"labels": ["CI", "BusinessApplication"], "properties": {"name": "Lantern Ledger", "sys_class_name": "synthetic_business_application", "business_criticality_label": "High"}},
+    "storage-team": {"labels": ["Group"], "properties": {"name": "Vesperloom Array Operations"}},
+    "database-team": {"labels": ["Group"], "properties": {"name": "Vesperloom Database Operations"}},
+    "app-team": {"labels": ["Group"], "properties": {"name": "Lantern Ledger Support"}},
+    "array-alert": {"labels": ["Alert"], "properties": {"number": "SYN-ALERT-001", "source": "Vesperloom Simulator", "severity_label": "Critical"}},
+    "server-alert": {"labels": ["Alert"], "properties": {"number": "SYN-ALERT-002", "source": "Vesperloom Simulator", "severity_label": "Major"}}
+  },
+  "relationships": [
+    ["db-a", "DEPENDS_ON", "array"],
+    ["db-b", "DEPENDS_ON", "array"],
+    ["db-c", "DEPENDS_ON", "array"],
+    ["cluster", "MEMBERS", "db-a"],
+    ["cluster", "MEMBERS", "db-b"],
+    ["cluster", "MEMBERS", "db-c"],
+    ["primary", "DEPENDS_ON", "cluster"],
+    ["app", "CONSUMES", "primary"],
+    ["app", "CONSUMES", "recovery"],
+    ["primary", "DR_PROVIDED_BY", "recovery"],
+    ["recovery", "RECEIVES_DATA_FROM", "primary"],
+    ["array", "SUPPORT_GROUP", "storage-team"],
+    ["db-a", "SUPPORT_GROUP", "database-team"],
+    ["db-b", "SUPPORT_GROUP", "database-team"],
+    ["db-c", "SUPPORT_GROUP", "database-team"],
+    ["app", "SUPPORT_GROUP", "app-team"],
+    ["array-alert", "ON", "array"],
+    ["server-alert", "ON", "db-a"],
+    ["server-alert", "GROUPED_UNDER", "array-alert"]
+  ]
+}
